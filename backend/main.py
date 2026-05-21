@@ -28,9 +28,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 from .aggregation import aggregate_dimensions, overall_intensity, top_signals
-from .db import db_enabled, persist_summary
-from .deepseek_client import DeepSeekError, call_summary
-from .prompts import build_summary_system_prompt, build_summary_user_message
+from .db import (
+    db_enabled,
+    get_or_create_active_session,
+    get_session_meta,
+    get_session_turns,
+    get_user_id_by_email,
+    insert_turn,
+    mark_session_closed,
+    persist_summary,
+)
+from .deepseek_client import DeepSeekError, call_mentor_response, call_summary
+from .prompts import (
+    build_mentor_response_messages,
+    build_mentor_response_system_prompt,
+    build_summary_system_prompt,
+    build_summary_user_message,
+)
+from .retrieval import embed_query, retrieve_mentor_kb
 from .signals_meta import SIGNAL_META, SIGNAL_NAMES
 
 # 项目根目录的 .env 也读一下（与 proxy.py 行为一致）
@@ -271,3 +286,221 @@ async def session_close(req: SessionCloseRequest) -> SessionCloseResponse:
         session_id=session_id_out,
         persistence_note=persistence_note,
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P1 · 状态化对话端点
+# ═════════════════════════════════════════════════════════════════════════════
+
+class SessionStartRequest(BaseModel):
+    user_email: str            # 例：'kexuejia@gmail.com'
+    mentor_id: MentorId
+
+
+class SessionHistoryItem(BaseModel):
+    turn_index: int
+    role: Literal["user", "mentor"]
+    content: str
+
+
+class SessionStartResponse(BaseModel):
+    session_id: int
+    is_new: bool
+    turn_count: int
+    user_id: int
+    mentor_id: MentorId
+    last_closed_summary_title: str | None = None
+    history: list[SessionHistoryItem]
+
+
+@app.post("/session/start", response_model=SessionStartResponse)
+async def session_start(req: SessionStartRequest) -> SessionStartResponse:
+    """
+    开启一次对话。规则（spec §9.2）：
+    - 同一 (user, mentor) 24h 内未关闭的 active session → 续接（返回历史）
+    - 否则新建一个 active session；同时回传上一次 closed session 的标题作为引子
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+
+    # 解析 user
+    user_id = await anyio.to_thread.run_sync(get_user_id_by_email, req.user_email)
+    if user_id is None:
+        raise HTTPException(status_code=404, detail=f"user not found: {req.user_email}")
+
+    sess = await anyio.to_thread.run_sync(
+        get_or_create_active_session, user_id, req.mentor_id,
+    )
+
+    history_raw = await anyio.to_thread.run_sync(
+        get_session_turns, sess["session_id"],
+    )
+    history = [
+        SessionHistoryItem(turn_index=t["turn_index"], role=t["role"], content=t["content"])
+        for t in history_raw
+    ]
+
+    last_summary = sess.get("last_closed_summary")
+    last_title = last_summary.get("title") if isinstance(last_summary, dict) else None
+
+    return SessionStartResponse(
+        session_id=sess["session_id"],
+        is_new=sess["is_new"],
+        turn_count=sess["turn_count"],
+        user_id=user_id,
+        mentor_id=req.mentor_id,
+        last_closed_summary_title=last_title,
+        history=history,
+    )
+
+
+class SessionTurnRequest(BaseModel):
+    session_id: int
+    user_input: str = Field(..., min_length=1)
+    top_k_concepts: int = 5
+    top_k_voice: int = 3
+    temperature: float = 0.7
+    debug: bool = False
+
+
+class TurnRetrievalDebug(BaseModel):
+    concepts: list[str]
+    voice_examples: list[str]
+    forbidden_moves: list[str]
+
+
+class SessionTurnResponse(BaseModel):
+    session_id: int
+    turn_count_after: int
+    user_turn_id: int
+    mentor_turn_id: int
+    mentor_response: str
+    retrieval: TurnRetrievalDebug | None = None
+
+
+@app.post("/session/turn", response_model=SessionTurnResponse)
+async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
+    """
+    单轮对话：
+    1. 读 session 元数据 + 历史 turns
+    2. embed 用户输入 → 检索 mentor KB
+    3. 拼 system prompt（注入 KB + 跨会话记忆 if 新会话首轮）
+    4. 调 DeepSeek 生成回应
+    5. INSERT 用户 turn + 导师 turn
+    6. 返回回应（+ 可选检索调试）
+
+    注：步骤 5 在 LLM 成功后才写入，避免无效轮次污染历史。
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+
+    # 1. 读 session
+    sess_meta = await anyio.to_thread.run_sync(get_session_meta, req.session_id)
+    if sess_meta is None:
+        raise HTTPException(status_code=404, detail=f"session {req.session_id} not found")
+    if sess_meta["status"] != "active":
+        raise HTTPException(
+            status_code=409,
+            detail=f"session {req.session_id} is {sess_meta['status']}, not active",
+        )
+
+    mentor_id = sess_meta["mentor_id"]
+    user_id = sess_meta["user_id"]
+    history = await anyio.to_thread.run_sync(get_session_turns, req.session_id)
+
+    # 2. 检索
+    try:
+        q_emb = await anyio.to_thread.run_sync(embed_query, req.user_input)
+    except Exception as e:
+        logger.exception("embed_query failed")
+        raise HTTPException(status_code=502, detail=f"embed error: {e}") from e
+
+    kb_chunks = await anyio.to_thread.run_sync(
+        retrieve_mentor_kb, mentor_id, q_emb, req.top_k_concepts, req.top_k_voice, True,
+    )
+
+    # 3. 决定是否注入跨会话记忆：仅当本 session 还没有 turns 时
+    last_summary_for_prompt = None
+    if sess_meta["turn_count"] == 0:
+        # 重新拿一次 last_closed_summary（不通过 get_or_create_active_session，因为它在创建之后才返回）
+        # 简化：使用 get_or_create_active_session 的返回路径——但本端点没拿到。
+        # 直接查一下：
+        from .db import _conn as _db_conn  # noqa: WPS437
+        with _db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT summary FROM sessions
+                    WHERE user_id = %s AND mentor_id = %s
+                      AND status IN ('closed_by_user', 'closed_by_rollover')
+                      AND summary IS NOT NULL
+                    ORDER BY closed_at DESC NULLS LAST, last_active_at DESC
+                    LIMIT 1
+                    """,
+                    (user_id, mentor_id),
+                )
+                row = cur.fetchone()
+                last_summary_for_prompt = row[0] if row else None
+
+    # 4. 拼 prompt + 调 LLM
+    sys_prompt = build_mentor_response_system_prompt(
+        mentor_id=mentor_id,
+        kb_chunks=kb_chunks,
+        last_closed_summary=last_summary_for_prompt,
+        session_turn_count=sess_meta["turn_count"],
+    )
+    msgs = build_mentor_response_messages(history, req.user_input)
+
+    try:
+        mentor_text = await anyio.to_thread.run_sync(
+            call_mentor_response, sys_prompt, msgs, req.temperature, 600,
+        )
+    except DeepSeekError as e:
+        logger.exception("call_mentor_response failed")
+        raise HTTPException(status_code=502, detail=f"DeepSeek error: {e}") from e
+
+    # 5. 持久化两条 turn（先 user，再 mentor）
+    user_turn_id = await anyio.to_thread.run_sync(
+        insert_turn, req.session_id, "user", req.user_input, None,
+    )
+
+    mentor_meta = {
+        "kb_concepts_used": [c["title"] for c in kb_chunks["concepts"]],
+        "kb_voice_used": [c["title"] for c in kb_chunks["voice_examples"]],
+        "had_cross_session_memory": last_summary_for_prompt is not None,
+        "model": os.environ.get("DEEPSEEK_MODEL_MENTOR", "deepseek-chat"),
+    }
+    mentor_turn_id = await anyio.to_thread.run_sync(
+        insert_turn, req.session_id, "mentor", mentor_text, mentor_meta,
+    )
+
+    return SessionTurnResponse(
+        session_id=req.session_id,
+        turn_count_after=sess_meta["turn_count"] + 2,
+        user_turn_id=user_turn_id,
+        mentor_turn_id=mentor_turn_id,
+        mentor_response=mentor_text,
+        retrieval=TurnRetrievalDebug(
+            concepts=[c["title"] for c in kb_chunks["concepts"]],
+            voice_examples=[c["title"] for c in kb_chunks["voice_examples"]],
+            forbidden_moves=[c["title"] for c in kb_chunks["forbidden_moves"]],
+        ) if req.debug else None,
+    )
+
+
+class SessionMarkClosedRequest(BaseModel):
+    session_id: int
+
+
+@app.post("/session/mark_closed")
+async def session_mark_closed(req: SessionMarkClosedRequest) -> dict:
+    """
+    单纯把 session 标记为 closed（不生成 summary）。
+
+    通常前端的"今日已尽"流程应该调 /session/close 顺便生成 summary。
+    这个端点是兜底：用户已经离开 / 网络断开时，让前端能快速关掉。
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+    await anyio.to_thread.run_sync(mark_session_closed, req.session_id, "closed_by_user")
+    return {"ok": True, "session_id": req.session_id}

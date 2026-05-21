@@ -1606,9 +1606,14 @@ const P = {
    DEEPSEEK API
 ══════════════════════════════════════════════════════ */
 const DS = {
-  // 同源 Vercel Serverless 代理：用服务端 DEEPSEEK_API_KEY，校验 Supabase 登录
-  // 本地若想脱机调（用 proxy.py），把下行改成 'http://localhost:3458'
-  endpoint: '/api/deepseek',
+  // 本地（localhost / 127.0.0.1 / file://）走 proxy.py @ 3458；
+  // 部署后走同源 Vercel Serverless /api/deepseek（带 Supabase JWT 校验）
+  endpoint: (() => {
+    const isLocal = location.hostname === 'localhost'
+                 || location.hostname === '127.0.0.1'
+                 || location.protocol === 'file:';
+    return isLocal ? 'http://localhost:3458' : '/api/deepseek';
+  })(),
   model: 'deepseek-v4-flash',
   get key() { return localStorage.getItem('ds_key') || ''; },
   set key(v) { localStorage.setItem('ds_key', v); }
