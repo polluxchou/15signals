@@ -118,6 +118,7 @@ def build_mentor_response_system_prompt(
     last_closed_summary: dict | None = None,
     session_turn_count: int = 0,
     user_memories: list[dict] | None = None,
+    semantic_profile: dict | None = None,
 ) -> str:
     """
     构造导师回应的 system prompt（开放式对话，非 JSON）。
@@ -165,6 +166,33 @@ def build_mentor_response_system_prompt(
         "（**不要复制原话**，吸收节奏、语调、提问方式。）\n\n"
         + "\n\n---\n\n".join(voice_lines)
     ) if voice_lines else ""
+
+    # ── [半稳定] 用户语义画像（由 consolidate cron 维护，跨多次会话沉淀的"对这个人的理解"） ──
+    profile_block = ""
+    if semantic_profile and semantic_profile.get("profile"):
+        p = semantic_profile["profile"]
+        prof_lines = []
+        if p.get("core_themes"):
+            prof_lines.append(f"  反复出现的主题：{', '.join(p['core_themes'][:4])}")
+        if p.get("relational_map"):
+            rels = "; ".join(f"{k}：{v}" for k, v in list(p["relational_map"].items())[:3])
+            if rels:
+                prof_lines.append(f"  关系图景：{rels}")
+        if p.get("self_narratives"):
+            sns = "；".join(f"「{s}」" for s in p["self_narratives"][:3])
+            prof_lines.append(f"  典型自述：{sns}")
+        if p.get("recurring_concerns"):
+            prof_lines.append(f"  反复回到的担忧：{', '.join(p['recurring_concerns'][:3])}")
+
+        if prof_lines:
+            profile_block = f"""# 你对这位用户的长期理解（多次对话沉淀）
+
+这不是某次具体说过的话，而是一种**稳定的认知**——你对他这个人的把握。
+
+{chr(10).join(prof_lines)}
+
+**使用方式**：不要直接引用这份画像，而是**作为你回应时的底色**——它让你的提问更准、更针对这个人，而不是泛泛而论。
+"""
 
     # ── [动态] 跨会话记忆：粗粒度 summary（仅新 session 首轮） ──
     summary_block = ""
@@ -243,8 +271,9 @@ def build_mentor_response_system_prompt(
         forbidden_block,
         concepts_block,
         voice_block,
-        summary_block,
-        memory_block,
+        profile_block,    # 长期理解（最稳定的"对这个人"）
+        summary_block,    # 上次对话整体印象（仅新 session 首轮）
+        memory_block,     # 本轮召回的具体记忆（每轮变）
         rules_block,
     ]
     return "\n\n---\n\n".join(p for p in parts if p.strip())

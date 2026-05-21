@@ -38,19 +38,22 @@ def persist_summary(
     mentor_id: str,
     summary_payload: dict[str, Any],
     raw_messages: list[dict],
+    close_reason: str = "closed_by_user",
 ) -> dict[str, Any]:
     """
     把复盘结果写入 sessions.summary。
 
+    Args:
+        close_reason: 'closed_by_user' | 'closed_by_rollover'
+                     仅当 session 当前 status='active' 时才会写入此值；
+                     若已经是 closed 状态，则保持原值不变。
+
     Returns:
         {"persisted": True, "session_id": <id>}  — 成功
         {"persisted": False, "reason": "..."}    — 跳过/失败（不抛异常）
-
-    行为：
-    - 若 session_id 已存在 → UPDATE summary, summary_generated_at, status='closed_by_user'
-    - 若 session_id 不存在但提供了 user_id → INSERT 一个新 session 并写入
-    - 都没有 → 跳过（前端可以不传 user/session 也能拿到复盘）
     """
+    if close_reason not in ("closed_by_user", "closed_by_rollover"):
+        return {"persisted": False, "reason": f"invalid close_reason: {close_reason}"}
     if not db_enabled():
         return {"persisted": False, "reason": "DATABASE_URL not configured"}
 
@@ -66,14 +69,14 @@ def persist_summary(
                         SET summary = %s::jsonb,
                             summary_generated_at = now(),
                             status = CASE
-                                WHEN status = 'active' THEN 'closed_by_user'
+                                WHEN status = 'active' THEN %s
                                 ELSE status
                             END,
                             closed_at = COALESCE(closed_at, now())
                         WHERE id = %s
                         RETURNING id
                         """,
-                        (payload_json, session_id),
+                        (payload_json, close_reason, session_id),
                     )
                     row = cur.fetchone()
                     if row is None:
@@ -91,11 +94,11 @@ def persist_summary(
                              status, closed_at,
                              summary, summary_generated_at, turn_count)
                         VALUES (%s, %s, now(), now(),
-                                'closed_by_user', now(),
+                                %s, now(),
                                 %s::jsonb, now(), %s)
                         RETURNING id
                         """,
-                        (user_id, mentor_id, payload_json, turn_count),
+                        (user_id, mentor_id, close_reason, payload_json, turn_count),
                     )
                     row = cur.fetchone()
                     new_id = row[0] if row else None
@@ -318,6 +321,26 @@ def get_session_meta(session_id: int) -> dict | None:
                 "turn_count": row[7],
                 "current_themes": row[8],
                 "summary": row[9],
+            }
+
+
+def get_user_semantic_profile(user_id: int) -> dict | None:
+    """读用户的稳定语义画像（由 consolidate cron 维护）。"""
+    if not db_enabled():
+        return None
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT profile, version, last_consolidated_at FROM user_semantic_profile WHERE user_id = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            return {
+                "profile": row[0],
+                "version": row[1],
+                "last_consolidated_at": row[2],
             }
 
 
