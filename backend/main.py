@@ -23,7 +23,7 @@ from typing import Literal
 
 import anyio
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
@@ -34,11 +34,13 @@ from .db import (
     get_session_meta,
     get_session_turns,
     get_user_id_by_email,
+    get_user_semantic_profile,
     insert_turn,
     mark_session_closed,
     persist_summary,
 )
 from .deepseek_client import DeepSeekError, call_mentor_response, call_summary
+from .jobs import run_consolidate, run_decay, run_rollover
 from .memory import extract_memories_from_summary, reinforce_memories, retrieve_user_memories
 from .prompts import (
     build_mentor_response_messages,
@@ -480,6 +482,9 @@ async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> 
                 row = cur.fetchone()
                 last_summary_for_prompt = row[0] if row else None
 
+    # 2c. 读用户的稳定语义画像（由 consolidate cron 维护）
+    semantic_profile = await anyio.to_thread.run_sync(get_user_semantic_profile, user_id)
+
     # 4. 拼 prompt + 调 LLM
     sys_prompt = build_mentor_response_system_prompt(
         mentor_id=mentor_id,
@@ -487,6 +492,7 @@ async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> 
         last_closed_summary=last_summary_for_prompt,
         session_turn_count=sess_meta["turn_count"],
         user_memories=user_memories,
+        semantic_profile=semantic_profile,
     )
     msgs = build_mentor_response_messages(history, req.user_input)
 
@@ -540,6 +546,47 @@ async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> 
             for m in user_memories
         ] if req.debug else [],
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# P3 · 后台维护端点（admin）
+# ═════════════════════════════════════════════════════════════════════════════
+# 这些端点用于 Vercel Cron / 外部调度器触发。
+# 若环境变量 ADMIN_TOKEN 已设置，请求必须带 `X-Admin-Token: <token>` 头。
+
+def _require_admin(token: str | None) -> None:
+    expected = os.environ.get("ADMIN_TOKEN")
+    if expected and token != expected:
+        raise HTTPException(status_code=403, detail="invalid admin token")
+
+
+@app.post("/admin/jobs/rollover")
+async def admin_rollover(
+    dry_run: bool = False,
+    grace_minutes: int = 5,
+    x_admin_token: str | None = Header(default=None),
+) -> dict:
+    _require_admin(x_admin_token)
+    return await anyio.to_thread.run_sync(run_rollover, grace_minutes, dry_run)
+
+
+@app.post("/admin/jobs/decay")
+async def admin_decay(
+    grace_days: int = 7,
+    daily_decay: float = 0.95,
+    floor: float = 0.05,
+    x_admin_token: str | None = Header(default=None),
+) -> dict:
+    _require_admin(x_admin_token)
+    return await anyio.to_thread.run_sync(run_decay, grace_days, daily_decay, floor)
+
+
+@app.post("/admin/jobs/consolidate")
+async def admin_consolidate(
+    x_admin_token: str | None = Header(default=None),
+) -> dict:
+    _require_admin(x_admin_token)
+    return await anyio.to_thread.run_sync(run_consolidate)
 
 
 class SessionMarkClosedRequest(BaseModel):
