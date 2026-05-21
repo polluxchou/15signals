@@ -649,19 +649,27 @@
       .user-email,
       .key-status { display: none !important; }
 
-      /* 导师选择：手机上横向排列会溢出屏幕（3×200 + 间距 ≈ 648px），改为纵向堆叠 */
+      /* 导师选择：手机上改为横向可滑动（避免纵向堆叠时高度超出视口、与顶栏重叠/被裁切） */
       .phil-cards {
-        flex-direction: column;
+        flex-direction: row;
         gap: 16px;
-        width: 100%;
-        max-width: 320px;
+        width: 100vw;
+        max-width: 100vw;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px 24px;
+        margin: 0 -24px; /* 抵消父容器 padding，确保两侧贴边可滑 */
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
+      .phil-cards::-webkit-scrollbar { display: none; }
       .phil-card {
-        width: 100%;
-        padding: 22px 18px 18px;
+        flex: 0 0 auto;
+        width: 220px;
+        scroll-snap-align: center;
       }
-      .phil-card svg { width: 64px; height: 80px; margin-bottom: 12px; }
-      .select-body { gap: 32px; padding: 0 20px; }
+      .select-body { gap: 32px; padding: 0 20px; width: 100%; }
     }
     /* 极窄屏（多按钮场景）：隐藏中央 logo，避免与两侧按钮重叠 */
     @media (max-width: 420px) {
