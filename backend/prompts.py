@@ -117,6 +117,7 @@ def build_mentor_response_system_prompt(
     kb_chunks: dict[str, list[dict]],
     last_closed_summary: dict | None = None,
     session_turn_count: int = 0,
+    user_memories: list[dict] | None = None,
 ) -> str:
     """
     构造导师回应的 system prompt（开放式对话，非 JSON）。
@@ -165,8 +166,8 @@ def build_mentor_response_system_prompt(
         + "\n\n---\n\n".join(voice_lines)
     ) if voice_lines else ""
 
-    # ── [动态] 跨会话记忆 ──
-    memory_block = ""
+    # ── [动态] 跨会话记忆：粗粒度 summary（仅新 session 首轮） ──
+    summary_block = ""
     if last_closed_summary and session_turn_count == 0:
         title = last_closed_summary.get("title", "")
         emo = last_closed_summary.get("emotional_summary", "")
@@ -175,14 +176,8 @@ def build_mentor_response_system_prompt(
             f"{t.get('display_name_zh', t.get('signal_name', ''))}({t.get('intensity', 0):.2f})"
             for t in top[:3]
         )
-        moments = last_closed_summary.get("moments", []) or []
-        quote_lines = []
-        for m in moments[:3]:
-            for q in (m.get("quotes") or [])[:1]:
-                if q.get("speaker") == "user" and q.get("text"):
-                    quote_lines.append(f'  - "{q["text"]}"')
 
-        memory_block = f"""# 上一次对话留下的笔记
+        summary_block = f"""# 上一次对话留下的整体印象
 
 你和这位用户上一次的对话主题：**{title}**
 
@@ -190,10 +185,46 @@ def build_mentor_response_system_prompt(
 
 突出信号：{top_str}
 
-用户的原话（你应当记得）：
-{chr(10).join(quote_lines) if quote_lines else "  （无具体引用）"}
+**今天本轮回应时**，如果话题自然衔接，可以**轻轻提及**这一整体印象，但不要勉强串联。
+"""
 
-**今天本轮回应时**，如果话题自然衔接，可以**轻轻提及**这些（"上一次你提到……"），但不要勉强串联。
+    # ── [动态] 跨会话记忆：细粒度 episodic_memories（每轮都召回） ──
+    memory_block = ""
+    if user_memories:
+        mem_lines = []
+        for i, m in enumerate(user_memories, 1):
+            days_ago = m.get("days_ago", 0.0)
+            if days_ago < 1:
+                when = "今天早些时候"
+            elif days_ago < 2:
+                when = "昨天"
+            elif days_ago < 7:
+                when = f"{int(days_ago)} 天前"
+            elif days_ago < 30:
+                when = f"约 {int(days_ago / 7)} 周前"
+            else:
+                when = f"约 {int(days_ago / 30)} 个月前"
+
+            quote = m.get("source_quote")
+            content = m.get("content", "")
+            if quote:
+                mem_lines.append(f'{i}. [{when}] 用户原话：「{quote}」')
+            else:
+                # pattern 类型，没有具体 quote
+                mem_lines.append(f'{i}. [{when}] {content[:150]}')
+
+        memory_block = f"""# 你对这位用户的记忆（最相关的几条）
+
+这些是基于你**真实记得**的——用户在过去某次对话中说过的话或当时呈现的状态。
+按"和此刻话题最相关 × 显著度"召回。
+
+{chr(10).join(mem_lines)}
+
+**使用规则**：
+- 如果某条记忆**与本轮话题真正呼应**，可以自然提起（"你上次说过……"、"我记得几周前……"）
+- 如果不呼应，**不要硬塞**——硬塞会让用户感到被监视
+- 不要一次引用超过 1 条记忆
+- 引用时**用对话语言**，不要说"根据我的记忆"
 """
 
     # ── [常规] 回应规则 ──
@@ -207,7 +238,15 @@ def build_mentor_response_system_prompt(
 
 现在请以**你**的方式回应用户。"""
 
-    parts = [persona_block, forbidden_block, concepts_block, voice_block, memory_block, rules_block]
+    parts = [
+        persona_block,
+        forbidden_block,
+        concepts_block,
+        voice_block,
+        summary_block,
+        memory_block,
+        rules_block,
+    ]
     return "\n\n---\n\n".join(p for p in parts if p.strip())
 
 
