@@ -345,10 +345,8 @@
       transition: opacity 0.6s ease;
       align-self: flex-start;
     }
-    /* 长按发送：1.5 秒填充才触发；中途松手则缓慢回落 */
+    /* 发送按钮：朴素的"边框+悬停填充" */
     .submit-btn {
-      position: relative;
-      overflow: hidden;
       font-family: 'EB Garamond', serif;
       font-size: 15px;
       line-height: 1;
@@ -362,33 +360,9 @@
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
-      transition: opacity 0.3s ease, border-color 0.3s ease;
+      transition: background 0.15s ease, color 0.15s ease, opacity 0.3s ease;
     }
-    /* 上升的"墨水"——按下时从底部慢慢沉满 */
-    .submit-btn::before {
-      content: '';
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
-      height: 0;
-      background: var(--ink);
-      transition: height 420ms cubic-bezier(0.4, 0, 0.6, 1);
-      pointer-events: none;
-    }
-    .submit-btn.pressing::before {
-      height: 100%;
-      transition: height 1500ms linear;
-    }
-    /* 按钮里的字（↓）随墨水上升从 ink 转为 cream */
-    .submit-btn .submit-label {
-      position: relative;
-      z-index: 1;
-      display: inline-block;
-      transition: color 420ms cubic-bezier(0.4, 0, 0.6, 1);
-    }
-    .submit-btn.pressing .submit-label {
-      color: var(--cream);
-      transition: color 1500ms linear;
-    }
+    .submit-btn:hover { background: var(--ink); color: var(--cream); }
     .submit-btn:disabled {
       opacity: 0.18;
       cursor: default;
@@ -734,6 +708,438 @@
       border-top: 1px solid var(--border);
     }
 
+    /* ══════════════════════════════
+       SCENE: REVIEW (复盘第一屏)
+    ══════════════════════════════ */
+    #sceneReview {
+      align-items: stretch;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    .review-col {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 88px 40px 80px;
+      display: flex;
+      flex-direction: column;
+    }
+    .review-attr {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .review-attr .attr-thumb { width: 24px; height: 30px; opacity: 0.55; flex-shrink: 0; }
+    .review-attr .attr-name {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .review-attr .review-date {
+      margin-left: auto;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 12px;
+      color: var(--ink-faint);
+      letter-spacing: 0.06em;
+    }
+    .review-title {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: 34px;
+      line-height: 1.28;
+      color: var(--ink);
+      margin: 6px 0 36px;
+    }
+
+    /* ── Intensity meter (整体强度) ── */
+    .intensity-block {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .intensity-label {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .intensity-value {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 58px;
+      line-height: 1;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+    }
+    .intensity-of {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-faint);
+      letter-spacing: 0.04em;
+    }
+    .intensity-note {
+      margin-left: auto;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-light);
+      text-align: right;
+      max-width: 200px;
+    }
+
+    /* ── Radar (六维) ── */
+    .radar-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+    .radar-wrap svg {
+      width: 100%;
+      max-width: 380px;
+      height: auto;
+      opacity: 0;
+      animation: dailyFadeIn 1.4s cubic-bezier(0,0,0.25,1) 0.2s forwards;
+    }
+
+    /* ── Emotional summary ── */
+    .review-summary {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 20px;
+      line-height: 1.78;
+      color: var(--ink);
+      opacity: 0.88;
+      margin-bottom: 44px;
+      white-space: pre-line;
+    }
+
+    /* ── Top signals 卡片 ── */
+    .review-section-label {
+      font-size: 10px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 18px;
+    }
+    .top-signal {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+    }
+    .top-signal:last-of-type { border-bottom: 1px solid var(--border); }
+    .top-signal-rank {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-faint);
+      width: 22px;
+      flex-shrink: 0;
+    }
+    .top-signal-name {
+      font-family: 'EB Garamond', serif;
+      font-size: 17px;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+    .top-signal-dim {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-left: 4px;
+    }
+    .top-signal-bar {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      position: relative;
+      align-self: center;
+      margin: 0 8px;
+    }
+    .top-signal-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: -1px;
+      height: 3px;
+      background: var(--ink);
+      width: var(--w, 0%);
+    }
+    .top-signal-intensity {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-light);
+      width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Moments ── */
+    .moments-block {
+      margin-top: 44px;
+    }
+    .moment-card {
+      padding: 22px 0 24px 22px;
+      border-left: 2px solid var(--ink);
+      margin-bottom: 26px;
+    }
+    .moment-signal {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 14px;
+    }
+    .moment-quote {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .moment-quote-speaker {
+      font-family: 'EB Garamond', serif;
+      font-style: normal;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-right: 10px;
+    }
+    .moment-echo {
+      font-family: 'EB Garamond', serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--ink-light);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border);
+    }
+
+    /* ── Review 底部按钮 ── */
+    .review-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 56px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .review-action-btn {
+      background: none;
+      border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 6px 0;
+      transition: color 0.15s;
+    }
+    .review-action-btn:hover { color: var(--ink); }
+    .review-action-btn.primary { color: var(--ink); }
+
+    /* ══════════════════════════════
+       SCENE: TRANSCRIPT (完整对话)
+    ══════════════════════════════ */
+    #sceneTranscript {
+      align-items: stretch;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    .transcript-col {
+      width: 100%;
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 88px 40px 80px;
+    }
+    .transcript-header {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+    .transcript-exchange {
+      padding-bottom: 28px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .transcript-exchange:last-of-type { border-bottom: none; }
+    .transcript-msg-user {
+      font-family: 'EB Garamond', serif;
+      font-size: 16.5px;
+      line-height: 1.7;
+      color: var(--ink);
+    }
+    .transcript-msg-mentor {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 18px;
+      line-height: 1.82;
+      color: var(--ink-light);
+      white-space: pre-line;
+    }
+    .transcript-role-tag {
+      font-family: 'EB Garamond', serif;
+      font-style: normal;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-right: 12px;
+    }
+
+    /* ══════════════════════════════
+       SCENE: HISTORY (我的复盘)
+    ══════════════════════════════ */
+    #sceneHistory {
+      align-items: stretch;
+      justify-content: flex-start;
+      overflow-y: auto;
+    }
+    .history-col {
+      width: 100%;
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 88px 40px 80px;
+    }
+    .history-heading {
+      margin-bottom: 36px;
+    }
+    .history-heading h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-style: italic;
+      font-size: 30px;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .history-heading p {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-light);
+    }
+    .history-item {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .history-item:hover { background: rgba(27,27,24,0.025); }
+    .history-item:last-of-type { border-bottom: 1px solid var(--border); }
+    .history-item-date {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 12px;
+      color: var(--ink-faint);
+      letter-spacing: 0.06em;
+      width: 90px;
+      flex-shrink: 0;
+    }
+    .history-item-body { flex: 1; min-width: 0; }
+    .history-item-title {
+      font-family: 'EB Garamond', serif;
+      font-size: 16px;
+      line-height: 1.45;
+      color: var(--ink);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item-meta {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .history-item-meta .meta-sep { margin: 0 8px; opacity: 0.4; }
+    .history-item-intensity {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--ink-light);
+      letter-spacing: -0.02em;
+      width: 44px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .history-empty {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--ink-faint);
+      text-align: center;
+      padding: 64px 0;
+      opacity: 0.6;
+    }
+
+    /* ── sceneSelect 上的"我的复盘"入口 ── */
+    .select-history-link {
+      margin-top: 32px;
+      background: none;
+      border: none;
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .select-history-link:hover { color: var(--ink); }
+
+    /* ── sceneResponse 的"结束对话"按钮 ── */
+    .end-btn {
+      margin-top: 16px;
+      background: none; border: none;
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 6px 0;
+      opacity: 0;
+      transition: color 0.15s, opacity 0.4s ease;
+      align-self: flex-start;
+    }
+    .end-btn:hover { color: var(--ink); }
+
+    /* ── Reviewing loading (用 sceneThinking 同样的呼吸点 + 一行小字) ── */
+    .reviewing-hint {
+      margin-top: 26px;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      color: var(--ink-faint);
+      text-align: center;
+    }
+
   </style>
 </head>
 <body>
@@ -805,6 +1211,7 @@
       <p>选择与你同行的思想者</p>
     </div>
     <div class="phil-cards" id="philCards"></div>
+    <button class="select-history-link" id="selectHistoryLink">— 看我的复盘记录</button>
   </div>
 </div>
 
@@ -816,8 +1223,8 @@
     <p class="daily-prompt">今天，这让你想起了什么？</p>
     <textarea id="dailyInput" placeholder="任何浮现的——一个画面、一句话、一种感觉……" rows="1"></textarea>
     <div class="write-footer">
-      <span class="write-hint">按住 ↓ 沉入</span>
-      <button class="submit-btn" id="dailySubmitBtn" aria-label="按住发送"><span class="submit-label">↓</span></button>
+      <span class="write-hint">回车发送</span>
+      <button class="submit-btn" id="dailySubmitBtn" aria-label="发送">↓</button>
     </div>
   </div>
   <!-- 旧 signal 元素保留为占位（hidden） -->
@@ -844,8 +1251,8 @@
         <div class="dots"><i></i><i></i><i></i></div>
         <span class="dict-label">在听</span>
       </div>
-      <span class="write-hint" id="writeHint">按住 ↓ 沉入</span>
-      <button class="submit-btn" id="submitBtn" aria-label="按住发送"><span class="submit-label">↓</span></button>
+      <span class="write-hint" id="writeHint">回车发送</span>
+      <button class="submit-btn" id="submitBtn" aria-label="发送">↓</button>
     </div>
     <p class="dissolve-hint" id="dissolveHint">他在思量……</p>
   </div>
@@ -863,6 +1270,66 @@
     <p class="resp-text" id="respText"></p>
     <button class="resp-more-hint" id="respMoreHint">— 还有更多</button>
     <button class="reply-btn" id="replyBtn">— 继续提问</button>
+    <button class="end-btn" id="endBtn">— 结束这段对话，做一次复盘</button>
+  </div>
+</div>
+
+<!-- ══ Scene: Review (复盘第一屏) ══ -->
+<div class="scene" id="sceneReview">
+  <div class="review-col">
+    <div class="review-attr" id="reviewAttr"></div>
+    <h1 class="review-title" id="reviewTitle"></h1>
+
+    <div class="intensity-block">
+      <span class="intensity-label">整体强度</span>
+      <span class="intensity-value" id="reviewIntensity">0</span>
+      <span class="intensity-of">/ 100</span>
+      <span class="intensity-note" id="reviewIntensityNote"></span>
+    </div>
+
+    <div class="radar-wrap" id="reviewRadar"></div>
+
+    <p class="review-summary" id="reviewSummary"></p>
+
+    <p class="review-section-label">主导信号</p>
+    <div id="reviewTopSignals"></div>
+
+    <div class="moments-block">
+      <p class="review-section-label">关键 moments</p>
+      <div id="reviewMoments"></div>
+    </div>
+
+    <div class="review-actions">
+      <button class="review-action-btn primary" id="viewTranscriptBtn">— 查看完整对话</button>
+      <button class="review-action-btn" id="viewHistoryBtn">— 我的复盘</button>
+      <button class="review-action-btn" id="newSessionBtn">— 重新选择导师</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Scene: Transcript (完整对话原文) ══ -->
+<div class="scene" id="sceneTranscript">
+  <div class="transcript-col">
+    <div class="transcript-header" id="transcriptHeader"></div>
+    <div id="transcriptContent"></div>
+    <div class="review-actions">
+      <button class="review-action-btn primary" id="backToReviewBtn">← 回到复盘</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Scene: History (我的复盘列表) ══ -->
+<div class="scene" id="sceneHistory">
+  <div class="history-col">
+    <div class="history-heading">
+      <h2>我的复盘</h2>
+      <p>每一次结束，都是一次回声</p>
+    </div>
+    <div id="historyList"></div>
+    <p class="history-empty" id="historyEmpty" style="display:none">还没有任何复盘。结束一段对话后，它会出现在这里。</p>
+    <div class="review-actions">
+      <button class="review-action-btn primary" id="historyBackBtn">← 回到选择</button>
+    </div>
   </div>
 </div>
 
@@ -1066,14 +1533,13 @@ function getTodayImage() {
 const P = {
   freud: {
     name: '西格蒙德·弗洛伊德', short: '弗洛伊德',
-    signals: ['焦虑', '渴望', '压抑', '身份认同'],
+    signals: ['焦虑恐慌', '情感麻木', '身份迷失'],
     tagline: '潜意识的解读者',
     years: '1856 — 1939',
     greetings: {
-      '焦虑': '焦虑从不凭空而来。\n\n它总是某种被压抑之物的回声——某个无法直言的愿望，以担忧的形式重新浮现。今天，是什么让你感到不安？不必整理，就说出来。',
-      '渴望': '你内心有某种渴望在涌动。\n\n但有意识的心灵以为自己想要的，很少是最初的对象。今天，告诉我你渴望的究竟是什么——还是说，你还不确定那是什么？',
-      '压抑': '有些东西，你一直没有说出口。\n\n也许它太危险，太令人不安，太不符合你对自己的认知。也许今天，可以试着说一说。',
-      '身份认同': '你所相信的那个自我，并非原初的。\n\n它是一个建构物——认同、防御与妥协叠加的结果。那个说话的「我」，你确定你认识它吗？',
+      '焦虑恐慌': '焦虑从不凭空而来。\n\n它总是某种被压抑之物的回声——一个无法直言的愿望，以担忧的形式重新浮现。今天，是什么让你的警报系统拒绝关闭？',
+      '情感麻木': '当一个人说自己"什么也感觉不到"，那并非真的空白。\n\n在感受不到的下面，往往有一种被自我严守的恐惧——感受太多、太深、太危险。今天，你最不敢让自己感受到的是什么？',
+      '身份迷失': '你所相信的那个「我」，并非原初的。\n\n它是一个建构物——认同、防御与妥协叠加的结果。当你在不同场合切换出不同的自己时，那个切换者，又是谁？',
       default: '你今天带着什么来到这里？\n\n不必整理，也不必知道如何开口。精神生活中没有什么是偶然的——你以这种方式来提问，这件事本身就有意义。'
     },
     R: {
@@ -1092,13 +1558,13 @@ const P = {
 
   weber: {
     name: '马克斯·韦伯', short: '韦伯',
-    signals: ['空虚', '身份认同', '倦怠'],
+    signals: ['意义丧失', '倦怠耗竭', '自主性丧失'],
     tagline: '意义与理性的追问者',
     years: '1864 — 1920',
     greetings: {
-      '空虚': '你所感受到的空洞，在我看来，不是个人的失败。\n\n它是现代世界的结构性处境——我把它称为「祛魅」。世界失去了神圣的意义框架，而理性虽然无比高效，却回答不了「为什么」。你今天，为什么而来？',
-      '身份认同': '在传统社会，你是什么，取决于你生在哪里。在现代社会，你是什么，变成了一个需要你自己回答的问题。\n\n这是一种解放，也是一种重负。你现在，是在为某种真正相信的东西而活，还是仅仅在维持某种生活方式？',
-      '倦怠': '你描述的这种疲惫，让我想到铁笼的意象。\n\n理性化的社会要求我们高效、可预测、可量化——它忘了问我们，这一切究竟为了什么。今天，告诉我你在什么地方感到了束缚。',
+      '意义丧失': '你所感受到的空洞，不是个人的失败。\n\n它是现代世界的结构性处境——我把它称为「祛魅」。世界失去了神圣的意义框架，理性虽然无比高效，却回答不了「为什么」。你今天，为什么而来？',
+      '倦怠耗竭': '你描述的这种疲惫，让我想到铁笼的意象。\n\n理性化的社会要求我们高效、可预测、可量化——它忘了问我们，这一切究竟为了什么。今天，告诉我你在什么地方感到了束缚。',
+      '自主性丧失': '在传统社会，你的命运由出身决定；在现代社会，你被告知一切由你选择。\n\n但你真的在选择吗？还是只是在更隐蔽的轨道上完成更精致的服从？告诉我：你最近一次做出真正属于自己的选择，是什么时候？',
       default: '你今天带着什么来到这里？\n\n我有一个习惯：我总是先问，在这个问题背后，隐藏着一个怎样的价值判断。因为所有的问题，都不是价值中立的。'
     },
     R: {
@@ -1114,13 +1580,13 @@ const P = {
 
   marx: {
     name: '卡尔·马克思', short: '马克思',
-    signals: ['疲惫', '愤怒', '失控感'],
+    signals: ['关系异化', '自主性丧失', '共同体瓦解'],
     tagline: '异化与解放的思考者',
     years: '1818 — 1883',
     greetings: {
-      '疲惫': '你的疲惫不仅仅是身体的信号。\n\n当劳动者感到被消耗而非被成全，当时间被出售而不是被创造——这种耗竭，是有其结构性原因的。今天，告诉我你在为什么而疲惫。',
-      '愤怒': '你的愤怒是有来由的。\n\n我从不劝人「接受现实」——那往往只是在要求人安于不公正。愤怒，如果指向了正确的方向，是一种认识工具。今天，是什么触发了你？',
-      '失控感': '失控感，有时候是一种清醒。\n\n当你感到生活不在自己手中，也许是因为它确实不在——不是因为你的软弱，而是因为某些力量本就不在你的掌控范围之内。今天，什么让你感到无力？',
+      '关系异化': '你的疏离感不仅仅来自具体的人际摩擦。\n\n当人与人之间的联系被效率、交易、社交资本所中介，亲密本身就变成了一种被异化的劳动。今天，告诉我：你最近一次感到「被真正看见」是什么时候？',
+      '自主性丧失': '失控感，有时候是一种清醒。\n\n当你感到生活不在自己手中，也许是因为它确实不在——不是因为你的软弱，而是因为某些力量本就属于结构性范畴。今天，什么让你感到无力？',
+      '共同体瓦解': '你说你没有「我们」——这不仅是你个人的孤独。\n\n这是原子化生存的产物：人被打散为单独的劳动力个体，被告知「自我成长」是唯一的答案，而所有可以让你说「我们」的整体，都被消解了。今天，你最想归属于哪个「我们」？',
       default: '你今天带着什么来到这里？\n\n告诉我你的处境——不是你的感受，而是你的处境。从具体的事实开始，这是理解一切的起点。'
     },
     R: {
@@ -1253,7 +1719,8 @@ let respChunks = [];
 let respChunkIdx = 0;
 
 const scenes = {};
-['sceneAuth','sceneSelect','sceneSignal','sceneGreeting','sceneWriting','sceneThinking','sceneResponse']
+['sceneAuth','sceneSelect','sceneSignal','sceneGreeting','sceneWriting','sceneThinking','sceneResponse',
+ 'sceneReview','sceneTranscript','sceneHistory']
   .forEach(id => { scenes[id] = document.getElementById(id); });
 
 // Init: hide all scenes — bootstrapAuth() 之后再决定首屏
@@ -1537,6 +2004,7 @@ async function submitFlow() {
   respEl.textContent   = respChunks[0];
   replyBtn.style.opacity = '0';
   moreHint.style.opacity = '0';
+  document.getElementById('endBtn').style.opacity = '0';
   css(respEl, { opacity: '0', filter: 'blur(5px)', transition: 'none' });
 
   await go('sceneResponse', 320);
@@ -1554,6 +2022,10 @@ async function submitFlow() {
     css(moreHint, { transition: 'opacity 0.9s ease', opacity: '1' });
   } else {
     css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
+    // 第二轮起才露出"结束对话"——首轮回应就让人结束太突兀
+    if (sessionCount >= 2) {
+      css(document.getElementById('endBtn'), { transition: 'opacity 1.4s ease 0.6s', opacity: '0.7' });
+    }
   }
   // 下一轮回到写作场景时输入框已被清空——按钮应保持禁用，
   // 直到用户重新输入内容
@@ -1567,90 +2039,41 @@ replyBtn.addEventListener('click', async () => {
   input.focus();
 });
 
-/* ── 长按发送（可复用工厂）─────────────────────────────────
-   交互契约：
+/* ── 发送绑定（可复用工厂）────────────────────────────────
+   交互契约（已回归朴素）：
    1. 输入框默认空，永不预填——起点的纯净。
-   2. 发送 = 按住按钮 1.5 秒，墨水从底部慢慢沉满，↓ 变浅入墨。
-   3. 键盘 ↓ 键 = 等价手势（光标在文本末尾时生效）。
-   4. 中途松手 = 取消，墨水缓慢回落（420ms），给反悔留出物理空间。
-   5. 不再提供 ⌘+回车 等"瞬时快捷键"——终点的庄重。
+   2. 发送 = 点击 ↓ 按钮，或按 Enter。
+   3. Enter 不换行——每条消息是一个完整的念头，不分段。
+   4. 例外：IME 拼音选词 / 听写期间 Enter 仍交还给系统（必需）。
 ─────────────────────────────────────────────────────────── */
-const PRESS_DURATION_MS = 1500;
-
-function bindLongPressSend({ button, input: inp, onSubmit, durationMs = PRESS_DURATION_MS }) {
-  let pressTimer = null;
-  let pressArmed = false;
-
-  function start(e) {
+function bindEnterSend({ button, input: inp, onSubmit }) {
+  function submit() {
     if (button.disabled) return;
     if (!inp.value.trim()) return;
-    if (e && e.cancelable) e.preventDefault();
-    pressArmed = true;
-    button.classList.add('pressing');
-    pressTimer = setTimeout(() => {
-      if (!pressArmed) return;
-      pressArmed = false;
-      pressTimer = null;
-      button.classList.remove('pressing');
-      onSubmit();
-    }, durationMs);
-  }
-  function cancel() {
-    if (!pressArmed && !pressTimer) return;
-    pressArmed = false;
-    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-    button.classList.remove('pressing');
+    onSubmit();
   }
 
-  // 鼠标 / 触屏
-  button.addEventListener('mousedown',  start);
-  button.addEventListener('mouseup',    cancel);
-  button.addEventListener('mouseleave', cancel);
-  button.addEventListener('touchstart', start, { passive: false });
-  button.addEventListener('touchend',   cancel);
-  button.addEventListener('touchcancel',cancel);
-  button.addEventListener('contextmenu', e => e.preventDefault());
-  window.addEventListener('blur', cancel);
-  window.addEventListener('keydown', e => { if (e.key === 'Escape') cancel(); });
+  // 点击按钮 = 发送
+  button.addEventListener('click', submit);
 
-  // 键盘 ↓ 键：与鼠标长按等价。
-  // 只在光标位于文本末尾时劫持——多行编辑中段的 ↓ 仍走原生光标下移。
-  inp.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowDown') return;
-    if (e.repeat || e.isComposing) return;
-    if (inp.classList.contains('dictating')) return;
-    if (!inp.value.trim()) return;
-    const atEnd = inp.selectionStart === inp.value.length
-               && inp.selectionEnd   === inp.value.length;
-    if (!atEnd) return;
-    e.preventDefault();
-    start();
-  });
-  inp.addEventListener('keyup', e => {
-    if (e.key === 'ArrowDown') cancel();
-  });
-  inp.addEventListener('blur', cancel);
-
-  // 输入为空 → 按钮自动禁用（避免无意义的按压）
-  inp.addEventListener('input', () => {
-    button.disabled = !inp.value.trim();
-  });
-  button.disabled = !inp.value.trim();
-
-  // 禁用 Enter 换行——每条消息是一个完整的念头，不分段、不连说
-  // 例外：IME 拼音选词 / 听写期间 Enter 是必需的，不能拦
+  // Enter = 发送（拼音/听写期间例外）
   inp.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     if (e.isComposing) return;
     if (inp.classList.contains('dictating')) return;
     e.preventDefault();
+    submit();
   });
 
-  return { cancel };
+  // 输入为空 → 按钮自动禁用
+  inp.addEventListener('input', () => {
+    button.disabled = !inp.value.trim();
+  });
+  button.disabled = !inp.value.trim();
 }
 
 // 写作场景的发送
-bindLongPressSend({ button: submitBtn, input: input, onSubmit: submitFlow });
+bindEnterSend({ button: submitBtn, input: input, onSubmit: submitFlow });
 
 /* ── 每日开场场景：图 + 联想输入 + 长按沉入 ────────────────── */
 const dailyInput     = document.getElementById('dailyInput');
@@ -1678,7 +2101,7 @@ dailyInput.addEventListener('input', () => {
   dailyInput.style.height = 'auto';
   dailyInput.style.height = dailyInput.scrollHeight + 'px';
 });
-bindLongPressSend({ button: dailySubmitBtn, input: dailyInput, onSubmit: dailyOpeningSubmit });
+bindEnterSend({ button: dailySubmitBtn, input: dailyInput, onSubmit: dailyOpeningSubmit });
 
 // macOS 听写 / IME 合成检测
 const dictIndicator = document.getElementById('dictIndicator');
@@ -1789,7 +2212,365 @@ document.addEventListener('keydown', e => {
 input.addEventListener('input', () => {
   input.style.height = 'auto';
   input.style.height = input.scrollHeight + 'px';
-  // 按钮 disabled 状态由 bindLongPressSend 工厂统一同步，这里只管高度
+  // 按钮 disabled 状态由 bindEnterSend 工厂统一同步，这里只管高度
+});
+
+/* ══════════════════════════════════════════════════════
+   REVIEW (复盘) · 15 信号 · 6 维度
+   ──────────────────────────────────────────────
+   端点 /session/close 由 backend FastAPI 提供。
+   本地开发：http://127.0.0.1:3459/session/close
+   部署后：可换为同源 /api/session/close（待 Vercel serverless）
+══════════════════════════════════════════════════════ */
+const REVIEW_ENDPOINT = (() => {
+  const isLocal = location.hostname === 'localhost'
+               || location.hostname === '127.0.0.1'
+               || location.protocol === 'file:';
+  return isLocal ? 'http://127.0.0.1:3459/session/close' : '/api/session/close';
+})();
+
+const REVIEWS_STORAGE_KEY = 'reviews_log';
+const REVIEWS_LIMIT = 50;
+
+// 6 维度展示名（雷达图标签 + 复盘元数据）
+const DIMENSION_LABELS = [
+  ['cognitive',     '认知'],
+  ['emotional',     '情感'],
+  ['existential',   '存在'],
+  ['relational',    '关系'],
+  ['embodied',      '身体'],
+  ['autonomy_tech', '自主·技术']
+];
+
+// 整体强度 → 文学化标签（不是分级评判，是回声）
+function intensityNote(score) {
+  if (score >= 80) return '尖叫得很响';
+  if (score >= 60) return '在持续低鸣';
+  if (score >= 40) return '有几处共振';
+  if (score >= 20) return '若有若无';
+  return '近乎静默';
+}
+
+// 拉取一条已存复盘
+function loadReviewLog() {
+  try { return JSON.parse(localStorage.getItem(REVIEWS_STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveReviewLog(arr) {
+  localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(arr.slice(0, REVIEWS_LIMIT)));
+}
+function appendReview(entry) {
+  const log = loadReviewLog();
+  log.unshift(entry);   // 最新在前
+  saveReviewLog(log);
+}
+
+/* ── 6 维雷达 SVG ──
+   六角形 + 三圈刻度 + 数据多边形 + 维度标签
+   颜色全部走 CSS 变量，跟产品调性一致 */
+function renderRadar(dimensionScores) {
+  const cx = 210, cy = 200, R = 130;
+  const N = 6;
+  // 起点顶（认知）顺时针：认知/情感/存在/关系/身体/自主·技术
+  const angles = DIMENSION_LABELS.map((_, i) => -Math.PI/2 + (i * 2*Math.PI/N));
+
+  const pt = (a, r) => `${(cx + Math.cos(a)*r).toFixed(1)},${(cy + Math.sin(a)*r).toFixed(1)}`;
+
+  const outer = angles.map(a => pt(a, R)).join(' ');
+  const rings = [0.25, 0.5, 0.75, 1.0].map((t, i) => {
+    const pts = angles.map(a => pt(a, R*t)).join(' ');
+    return `<polygon points="${pts}" fill="none" stroke="#D2CEC2" stroke-width="${i === 3 ? 0.9 : 0.5}" opacity="${i === 3 ? 0.9 : 0.5}"/>`;
+  }).join('');
+
+  const axes = angles.map(a =>
+    `<line x1="${cx}" y1="${cy}" x2="${(cx + Math.cos(a)*R).toFixed(1)}" y2="${(cy + Math.sin(a)*R).toFixed(1)}" stroke="#D2CEC2" stroke-width="0.5"/>`
+  ).join('');
+
+  const dataPts = angles.map((a, i) => {
+    const key = DIMENSION_LABELS[i][0];
+    const t = Math.max(0, Math.min(1, dimensionScores[key] ?? 0));
+    return pt(a, R*t);
+  }).join(' ');
+
+  const dataDots = angles.map((a, i) => {
+    const key = DIMENSION_LABELS[i][0];
+    const t = Math.max(0, Math.min(1, dimensionScores[key] ?? 0));
+    return `<circle cx="${(cx + Math.cos(a)*R*t).toFixed(1)}" cy="${(cy + Math.sin(a)*R*t).toFixed(1)}" r="2.5" fill="#1B1B18"/>`;
+  }).join('');
+
+  const labelEls = angles.map((a, i) => {
+    const lr = R + 28;
+    const x = (cx + Math.cos(a)*lr).toFixed(1);
+    const y = (cy + Math.sin(a)*lr).toFixed(1);
+    const key = DIMENSION_LABELS[i][0];
+    const zh  = DIMENSION_LABELS[i][1];
+    const score = Math.round((dimensionScores[key] ?? 0) * 100);
+    // anchor 适配位置
+    let anchor = 'middle';
+    if (Math.cos(a) > 0.3) anchor = 'start';
+    else if (Math.cos(a) < -0.3) anchor = 'end';
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="'EB Garamond',serif" font-size="11.5" letter-spacing="0.08em" fill="#5C5C52">${zh}</text>
+            <text x="${x}" y="${(parseFloat(y)+14).toFixed(1)}" text-anchor="${anchor}" font-family="'Playfair Display',serif" font-style="italic" font-size="11" fill="#9C9C8E">${score}</text>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 420 400" xmlns="http://www.w3.org/2000/svg">
+    ${rings}
+    ${axes}
+    <polygon points="${dataPts}" fill="#1B1B18" fill-opacity="0.08" stroke="#1B1B18" stroke-width="1.4" stroke-linejoin="round"/>
+    ${dataDots}
+    ${labelEls}
+  </svg>`;
+}
+
+/* ── POST /session/close ── */
+async function fetchSummary(mentorId, messages) {
+  // 可选：携带 Supabase access_token，便于后续服务端鉴权
+  let authHeader = {};
+  try {
+    const { data: { session } } = await supa.auth.getSession();
+    if (session?.access_token) authHeader = { 'Authorization': `Bearer ${session.access_token}` };
+  } catch (_) { /* 离线/未登录都允许复盘 */ }
+
+  const res = await fetch(REVIEW_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader },
+    body: JSON.stringify({ mentor_id: mentorId, messages })
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`复盘服务返回 ${res.status}: ${errText.slice(0, 120)}`);
+  }
+  return res.json();
+}
+
+/* ── 渲染复盘到 sceneReview ── */
+let currentReview = null;   // 缓存：当前展示中的复盘对象（含 messages，供 transcript 用）
+
+function renderReview(review) {
+  currentReview = review;
+  const mentorKey = review.mentor_id;
+  const d = P[mentorKey] || {};
+
+  // 头部归属
+  document.getElementById('reviewAttr').innerHTML = `
+    ${svgThumb(mentorKey)}
+    <span class="attr-name">${d.short || mentorKey}</span>
+    <span class="review-date">${formatReviewDate(review.created_at)}</span>
+  `;
+
+  // 标题
+  document.getElementById('reviewTitle').textContent = review.title || '一次回声';
+
+  // 整体强度
+  document.getElementById('reviewIntensity').textContent = review.overall_intensity ?? 0;
+  document.getElementById('reviewIntensityNote').textContent = intensityNote(review.overall_intensity ?? 0);
+
+  // 雷达
+  document.getElementById('reviewRadar').innerHTML = renderRadar(review.dimension_scores || {});
+
+  // 感性总结
+  document.getElementById('reviewSummary').textContent = review.emotional_summary || '';
+
+  // Top signals
+  const topsBox = document.getElementById('reviewTopSignals');
+  const tops = review.top_signals || [];
+  const dimZhMap = Object.fromEntries(DIMENSION_LABELS);
+  topsBox.innerHTML = tops.map((t, i) => {
+    const pct = Math.round((t.intensity ?? 0) * 100);
+    return `<div class="top-signal">
+      <span class="top-signal-rank">${String(i + 1).padStart(2, '0')}</span>
+      <span class="top-signal-name">${t.display_name_zh || t.signal_name}</span>
+      <span class="top-signal-dim">${dimZhMap[t.dimension] || ''}</span>
+      <span class="top-signal-bar" style="--w:${pct}%"></span>
+      <span class="top-signal-intensity">${pct}</span>
+    </div>`;
+  }).join('') || '<p class="history-empty" style="padding:24px 0;font-size:14px">这段对话里没有明显主导信号 —— 也许是一片均匀的水面。</p>';
+
+  // Moments
+  const momentsBox = document.getElementById('reviewMoments');
+  const moments = review.moments || [];
+  momentsBox.innerHTML = moments.length === 0
+    ? '<p class="history-empty" style="padding:24px 0;font-size:14px">这段对话没能采撷到清晰的瞬间。</p>'
+    : moments.map(m => {
+        const qs = (m.quotes || []).map(q =>
+          `<p class="moment-quote"><span class="moment-quote-speaker">${q.speaker === 'user' ? '我' : (d.short || '导师')}</span>"${escapeHtml(q.text)}"</p>`
+        ).join('');
+        return `<div class="moment-card">
+          <div class="moment-signal">${m.display_name_zh || m.signal_name}</div>
+          ${qs}
+          ${m.echo ? `<p class="moment-echo">${escapeHtml(m.echo)}</p>` : ''}
+        </div>`;
+      }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function formatReviewDate(iso) {
+  try {
+    const d = iso ? new Date(iso) : new Date();
+    return d.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+         + ' · ' + d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+/* ── 渲染 sceneTranscript（基于 currentReview.messages） ── */
+function renderTranscript() {
+  if (!currentReview) return;
+  const d = P[currentReview.mentor_id] || {};
+  document.getElementById('transcriptHeader').textContent =
+    `与 ${d.short || currentReview.mentor_id} · ${formatReviewDate(currentReview.created_at)}`;
+
+  const box = document.getElementById('transcriptContent');
+  const msgs = currentReview.messages || [];
+  // 按对（user, mentor）聚合
+  const exchanges = [];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    if (m.role === 'user') {
+      const next = msgs[i + 1];
+      exchanges.push({ user: m, mentor: (next && next.role === 'assistant') ? next : null });
+      if (next && next.role === 'assistant') i++;
+    } else {
+      exchanges.push({ user: null, mentor: m });
+    }
+  }
+  box.innerHTML = exchanges.map(ex => {
+    const userBlock = ex.user ? `<p class="transcript-msg-user"><span class="transcript-role-tag">我</span>${escapeHtml(ex.user.content)}</p>` : '';
+    const mentorBlock = ex.mentor ? `<p class="transcript-msg-mentor"><span class="transcript-role-tag">${d.short || '导师'}</span>${escapeHtml(ex.mentor.content)}</p>` : '';
+    return `<div class="transcript-exchange">${userBlock}${mentorBlock}</div>`;
+  }).join('');
+}
+
+/* ── 渲染 sceneHistory ── */
+function renderHistoryList() {
+  const log = loadReviewLog();
+  const listBox = document.getElementById('historyList');
+  const emptyEl = document.getElementById('historyEmpty');
+  if (log.length === 0) {
+    listBox.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  listBox.innerHTML = log.map((r, idx) => {
+    const d = P[r.mentor_id] || {};
+    const topSig = (r.top_signals || [])[0];
+    const topName = topSig ? (topSig.display_name_zh || topSig.signal_name) : '—';
+    return `<div class="history-item" data-idx="${idx}">
+      <span class="history-item-date">${formatReviewDate(r.created_at)}</span>
+      <div class="history-item-body">
+        <div class="history-item-title">${escapeHtml(r.title || '一次回声')}</div>
+        <div class="history-item-meta">
+          ${d.short || r.mentor_id}<span class="meta-sep">·</span>${topName}
+        </div>
+      </div>
+      <span class="history-item-intensity">${r.overall_intensity ?? 0}</span>
+    </div>`;
+  }).join('');
+
+  // 绑定点击
+  listBox.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', async () => {
+      const idx = parseInt(el.dataset.idx, 10);
+      const r = loadReviewLog()[idx];
+      if (!r) return;
+      renderReview(r);
+      await go('sceneReview', 500);
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   END SESSION → 生成复盘
+══════════════════════════════════════════════════════ */
+async function endSessionAndReview() {
+  if (!curPhil || convHistory.length < 2) {
+    // 太短的对话，没什么好复盘的
+    alert('再多说几句吧，至少完整地聊上一两轮。');
+    return;
+  }
+  document.getElementById('backBtn').style.display = 'none';
+
+  // 进入 thinking 场景，加一行"我在回望……"
+  const thinkingScene = document.getElementById('sceneThinking');
+  let reviewingHint = thinkingScene.querySelector('.reviewing-hint');
+  if (!reviewingHint) {
+    reviewingHint = document.createElement('div');
+    reviewingHint.className = 'reviewing-hint';
+    reviewingHint.textContent = '我在回望……';
+    thinkingScene.appendChild(reviewingHint);
+  }
+  reviewingHint.style.display = 'block';
+  await go('sceneThinking', 380);
+
+  let summary;
+  try {
+    summary = await fetchSummary(curPhil, convHistory);
+  } catch (err) {
+    reviewingHint.textContent = '复盘暂未完成 · ' + (err.message || '请稍后再试');
+    setTimeout(() => {
+      reviewingHint.textContent = '我在回望……';
+      reviewingHint.style.display = 'none';
+      document.getElementById('backBtn').style.display = 'block';
+    }, 2500);
+    await go('sceneResponse', 400);
+    return;
+  }
+  reviewingHint.style.display = 'none';
+
+  // 持久化
+  const entry = {
+    ...summary,
+    mentor_id: curPhil,
+    created_at: new Date().toISOString(),
+    messages: [...convHistory]
+  };
+  appendReview(entry);
+
+  // 结束本次对话历史（已沉淀到 review log，对话本身可以"清场"，回到"今日"留白）
+  // 注：保留 conv_${philKey} 不动 —— 让用户可以选择"继续这段记忆"或"重新开始"。
+  //     如果未来想强制每次结束=清场，可在此 clearHistory(curPhil)
+  convHistory = [];
+  sessionCount = 0;
+
+  renderReview(entry);
+  await go('sceneReview', 600);
+}
+
+/* ══════════════════════════════════════════════════════
+   REVIEW SCENE BUTTONS
+══════════════════════════════════════════════════════ */
+document.getElementById('endBtn').addEventListener('click', endSessionAndReview);
+
+document.getElementById('viewTranscriptBtn').addEventListener('click', async () => {
+  renderTranscript();
+  await go('sceneTranscript', 500);
+});
+document.getElementById('backToReviewBtn').addEventListener('click', async () => {
+  await go('sceneReview', 500);
+});
+
+document.getElementById('viewHistoryBtn').addEventListener('click', async () => {
+  renderHistoryList();
+  await go('sceneHistory', 500);
+});
+document.getElementById('historyBackBtn').addEventListener('click', async () => {
+  document.getElementById('backBtn').style.display = 'none';
+  await go('sceneSelect', 500);
+});
+document.getElementById('selectHistoryLink').addEventListener('click', async () => {
+  renderHistoryList();
+  await go('sceneHistory', 500);
+});
+
+document.getElementById('newSessionBtn').addEventListener('click', async () => {
+  curPhil = null;
+  document.getElementById('backBtn').style.display = 'none';
+  await go('sceneSelect', 500);
 });
 
 /* ══════════════════════════════════════════════════════

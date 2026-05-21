@@ -26,7 +26,7 @@
 chunk_type: concept
 mentor_id: freud
 tags: [防御机制, 潜意识, 焦虑, 否认]
-related_signals: [repression, anxiety, unconscious_material, depressive_low]
+related_signals: [emotional_numbness, anxiety_panic, reality_blur, burnout]
 source_citation: 《精神分析引论》第十九讲；《抑制、症状与焦虑》
 ```
 
@@ -49,7 +49,7 @@ source_citation: 《精神分析引论》第十九讲；《抑制、症状与焦
 chunk_type: concept
 mentor_id: freud
 tags: [基础理论, 潜意识, 意识结构]
-related_signals: [unconscious_material, repression, desire_longing]
+related_signals: [reality_blur, emotional_numbness, meaning_loss]
 source_citation: 《释梦》第七章；《潜意识》(1915)
 ```
 
@@ -73,7 +73,7 @@ source_citation: 《释梦》第七章；《潜意识》(1915)
 chunk_type: concept
 mentor_id: freud
 tags: [防御机制, 自我功能]
-related_signals: [repression, anger, anxiety, relational_tension]
+related_signals: [emotional_numbness, relational_alienation, anxiety_panic]
 source_citation: 安娜·弗洛伊德《自我与防御机制》(1936)
 ```
 
@@ -98,7 +98,7 @@ source_citation: 安娜·弗洛伊德《自我与防御机制》(1936)
 chunk_type: concept
 mentor_id: freud
 tags: [人格结构, 基础理论]
-related_signals: [self_worth_doubt, repression, identity_disturbance, anger]
+related_signals: [identity_lost, emotional_numbness, relational_alienation]
 source_citation: 《自我与本我》(1923)
 ```
 
@@ -125,7 +125,7 @@ source_citation: 《自我与本我》(1923)
 chunk_type: concept
 mentor_id: freud
 tags: [梦, 潜意识, 象征]
-related_signals: [unconscious_material, desire_longing, fear]
+related_signals: [reality_blur, meaning_loss, anxiety_panic]
 source_citation: 《释梦》(1900)
 ```
 
@@ -154,7 +154,7 @@ source_citation: 《释梦》(1900)
 chunk_type: concept
 mentor_id: freud
 tags: [模式, 童年, 关系]
-related_signals: [relational_tension, fear, anger, identity_disturbance]
+related_signals: [relational_alienation, anxiety_panic, identity_lost]
 source_citation: 《超越快乐原则》(1920)
 ```
 
@@ -178,7 +178,7 @@ source_citation: 《超越快乐原则》(1920)
 chunk_type: concept
 mentor_id: freud
 tags: [关系, 治疗关系]
-related_signals: [relational_tension, anger, desire_longing]
+related_signals: [relational_alienation, meaning_loss]
 source_citation: 《移情动力学》(1912)
 ```
 
@@ -199,7 +199,7 @@ source_citation: 《移情动力学》(1912)
 chunk_type: concept
 mentor_id: freud
 tags: [防御机制, 转化, 创造]
-related_signals: [desire_longing, work_burnout, meaning_crisis]
+related_signals: [meaning_loss, burnout]
 source_citation: 《文明及其不满》(1930)
 ```
 
@@ -229,7 +229,7 @@ source_citation: 《文明及其不满》(1930)
 chunk_type: voice_example
 mentor_id: freud
 tags: [反问, 注意力转向]
-related_signals: [repression, anxiety]
+related_signals: [emotional_numbness, anxiety_panic]
 ```
 
 **情境：** 用户用"还好"、"没什么"封闭一段叙述。
@@ -247,7 +247,7 @@ related_signals: [repression, anxiety]
 chunk_type: voice_example
 mentor_id: freud
 tags: [童年, 模式识别]
-related_signals: [relational_tension, fear, identity_disturbance]
+related_signals: [relational_alienation, anxiety_panic, identity_lost]
 ```
 
 **情境：** 用户在描述一段当下关系，但描述的方式让人想起更早的什么。
@@ -265,7 +265,7 @@ related_signals: [relational_tension, fear, identity_disturbance]
 chunk_type: voice_example
 mentor_id: freud
 tags: [梦, 自由联想]
-related_signals: [unconscious_material]
+related_signals: [reality_blur]
 ```
 
 **情境：** 用户报告了一个梦。
@@ -283,7 +283,7 @@ related_signals: [unconscious_material]
 chunk_type: voice_example
 mentor_id: freud
 tags: [超我, 自我评判]
-related_signals: [self_worth_doubt, repression]
+related_signals: [identity_lost, emotional_numbness]
 ```
 
 **情境：** 用户严厉地评判自己——"我就是没用"、"我不配"。
@@ -301,7 +301,7 @@ related_signals: [self_worth_doubt, repression]
 chunk_type: voice_example
 mentor_id: freud
 tags: [节制, 引导]
-related_signals: [unconscious_material, desire_longing]
+related_signals: [reality_blur, meaning_loss]
 ```
 
 **情境：** 用户期待导师"告诉他答案"。
@@ -333,7 +333,7 @@ template_meta:
   signal_combo: [anxiety]
   has_memory: false
   session_count_min: 1
-related_signals: [anxiety]
+related_signals: [anxiety_panic]
 ```
 
 **模板：**
@@ -353,7 +353,7 @@ template_meta:
   signal_combo: [repression]
   has_memory: false
   session_count_min: 1
-related_signals: [repression]
+related_signals: [emotional_numbness]
 ```
 
 **模板：**
@@ -373,7 +373,7 @@ template_meta:
   signal_combo: [relational_tension]
   has_memory: false
   session_count_min: 1
-related_signals: [relational_tension]
+related_signals: [relational_alienation]
 ```
 
 **模板：**
@@ -393,7 +393,7 @@ template_meta:
   signal_combo: [unconscious_material]
   has_memory: false
   session_count_min: 1
-related_signals: [unconscious_material]
+related_signals: [reality_blur]
 ```
 
 **模板：**
@@ -413,7 +413,7 @@ template_meta:
   signal_combo: [anxiety, repression]
   has_memory: false
   session_count_min: 1
-related_signals: [anxiety, repression]
+related_signals: [anxiety_panic, emotional_numbness]
 ```
 
 **模板：**
@@ -434,7 +434,7 @@ template_meta:
   has_memory: true
   trigger: trend_rising  # 7 天斜率显著上升
   session_count_min: 4
-related_signals: [anxiety]
+related_signals: [anxiety_panic]
 ```
 
 **模板：**
@@ -455,7 +455,7 @@ template_meta:
   has_memory: true
   trigger: persistent_5d  # 连续 5 天以上出现
   session_count_min: 4
-related_signals: [loss_of_control]
+related_signals: [autonomy_loss]
 ```
 
 **模板：**
@@ -476,7 +476,7 @@ template_meta:
   has_memory: true
   trigger: same_relation_recurring  # 同一关系反复出现
   session_count_min: 4
-related_signals: [relational_tension, anger]
+related_signals: [relational_alienation]
 ```
 
 **模板：**
@@ -497,7 +497,7 @@ template_meta:
   has_memory: true
   trigger: open_thread_pickup  # 上次有 open_thread
   session_count_min: 4
-related_signals: [desire_longing]
+related_signals: [meaning_loss]
 ```
 
 **模板：**
@@ -518,7 +518,7 @@ template_meta:
   has_memory: true
   trigger: persistent_7d
   session_count_min: 4
-related_signals: [depressive_low, emptiness]
+related_signals: [burnout, meaning_loss, emotional_numbness]
 ```
 
 **模板：**

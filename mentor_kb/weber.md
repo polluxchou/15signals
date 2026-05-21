@@ -27,7 +27,7 @@
 chunk_type: concept
 mentor_id: weber
 tags: [现代性, 工具理性, 效率]
-related_signals: [work_burnout, alienation, meaning_crisis, emptiness]
+related_signals: [burnout, relational_alienation, meaning_loss, emotional_numbness]
 source_citation: 《新教伦理与资本主义精神》；《经济与社会》
 ```
 
@@ -51,7 +51,7 @@ source_citation: 《新教伦理与资本主义精神》；《经济与社会》
 chunk_type: concept
 mentor_id: weber
 tags: [现代性, 意义, 神圣]
-related_signals: [meaning_crisis, emptiness, depressive_low]
+related_signals: [meaning_loss, emotional_numbness, burnout]
 source_citation: 《以学术为业》(1917)
 ```
 
@@ -79,7 +79,7 @@ source_citation: 《以学术为业》(1917)
 chunk_type: concept
 mentor_id: weber
 tags: [工作, 意义, 召唤]
-related_signals: [work_burnout, meaning_crisis, identity_disturbance]
+related_signals: [burnout, meaning_loss, identity_lost]
 source_citation: 《以政治为业》(1919)；《以学术为业》(1917)
 ```
 
@@ -103,7 +103,7 @@ source_citation: 《以政治为业》(1919)；《以学术为业》(1917)
 chunk_type: concept
 mentor_id: weber
 tags: [资本主义, 工作伦理, 历史]
-related_signals: [work_burnout, self_worth_doubt, anxiety]
+related_signals: [burnout, identity_lost, anxiety_panic]
 source_citation: 《新教伦理与资本主义精神》(1905)
 ```
 
@@ -127,7 +127,7 @@ source_citation: 《新教伦理与资本主义精神》(1905)
 chunk_type: concept
 mentor_id: weber
 tags: [资本主义, 现代性, 困住]
-related_signals: [loss_of_control, alienation, meaning_crisis, work_burnout]
+related_signals: [autonomy_loss, relational_alienation, meaning_loss, burnout]
 source_citation: 《新教伦理与资本主义精神》(1905) 结尾
 ```
 
@@ -155,7 +155,7 @@ source_citation: 《新教伦理与资本主义精神》(1905) 结尾
 chunk_type: concept
 mentor_id: weber
 tags: [意义, 现代性]
-related_signals: [meaning_crisis, emptiness, depressive_low]
+related_signals: [meaning_loss, emotional_numbness, burnout]
 source_citation: 《以学术为业》
 ```
 
@@ -179,7 +179,7 @@ source_citation: 《以学术为业》
 chunk_type: concept
 mentor_id: weber
 tags: [理性类型, 价值]
-related_signals: [meaning_crisis, identity_disturbance, work_burnout]
+related_signals: [meaning_loss, identity_lost, burnout]
 source_citation: 《经济与社会》
 ```
 
@@ -210,7 +210,7 @@ source_citation: 《经济与社会》
 chunk_type: concept
 mentor_id: weber
 tags: [伦理, 选择, 个人]
-related_signals: [identity_disturbance, meaning_crisis, self_worth_doubt]
+related_signals: [identity_lost, meaning_loss]
 source_citation: 《新教伦理与资本主义精神》；《中间考察》
 ```
 
@@ -244,7 +244,7 @@ source_citation: 《新教伦理与资本主义精神》；《中间考察》
 chunk_type: voice_example
 mentor_id: weber
 tags: [祛魅, 承认]
-related_signals: [meaning_crisis, emptiness]
+related_signals: [meaning_loss, emotional_numbness]
 ```
 
 **情境：** 用户说"我什么都明白，但什么也感动不了我。"
@@ -262,7 +262,7 @@ related_signals: [meaning_crisis, emptiness]
 chunk_type: voice_example
 mentor_id: weber
 tags: [理性类型, 价值澄清]
-related_signals: [meaning_crisis, work_burnout, identity_disturbance]
+related_signals: [meaning_loss, burnout, identity_lost]
 ```
 
 **情境：** 用户在"理性地"分析一个让自己痛苦的选择。
@@ -280,7 +280,7 @@ related_signals: [meaning_crisis, work_burnout, identity_disturbance]
 chunk_type: voice_example
 mentor_id: weber
 tags: [历史化, 去个人化]
-related_signals: [work_burnout, alienation, self_worth_doubt]
+related_signals: [burnout, relational_alienation, identity_lost]
 ```
 
 **情境：** 用户为自己的疲惫和无意义感自责。
@@ -298,7 +298,7 @@ related_signals: [work_burnout, alienation, self_worth_doubt]
 chunk_type: voice_example
 mentor_id: weber
 tags: [节制, 拒绝廉价安慰]
-related_signals: [meaning_crisis, depressive_low]
+related_signals: [meaning_loss, burnout]
 ```
 
 **情境：** 用户希望被告知"一切都会好起来"。
@@ -316,7 +316,7 @@ related_signals: [meaning_crisis, depressive_low]
 chunk_type: voice_example
 mentor_id: weber
 tags: [价值澄清, Lebensführung]
-related_signals: [identity_disturbance, meaning_crisis, self_worth_doubt]
+related_signals: [identity_lost, meaning_loss]
 ```
 
 **情境：** 用户在多种身份/角色间撕扯，不知道自己是谁。
@@ -341,7 +341,7 @@ template_meta:
   signal_combo: [work_burnout]
   has_memory: false
   session_count_min: 1
-related_signals: [work_burnout]
+related_signals: [burnout]
 ```
 
 **模板：**
@@ -361,7 +361,7 @@ template_meta:
   signal_combo: [meaning_crisis]
   has_memory: false
   session_count_min: 1
-related_signals: [meaning_crisis]
+related_signals: [meaning_loss]
 ```
 
 **模板：**
@@ -381,7 +381,7 @@ template_meta:
   signal_combo: [identity_disturbance]
   has_memory: false
   session_count_min: 1
-related_signals: [identity_disturbance]
+related_signals: [identity_lost]
 ```
 
 **模板：**
@@ -402,7 +402,7 @@ template_meta:
   signal_combo: [emptiness]
   has_memory: false
   session_count_min: 1
-related_signals: [emptiness]
+related_signals: [emotional_numbness, meaning_loss]
 ```
 
 **模板：**
@@ -422,7 +422,7 @@ template_meta:
   signal_combo: [work_burnout, meaning_crisis]
   has_memory: false
   session_count_min: 1
-related_signals: [work_burnout, meaning_crisis]
+related_signals: [burnout, meaning_loss]
 ```
 
 **模板：**
@@ -443,7 +443,7 @@ template_meta:
   has_memory: true
   trigger: persistent_7d
   session_count_min: 4
-related_signals: [meaning_crisis]
+related_signals: [meaning_loss]
 ```
 
 **模板：**
@@ -464,7 +464,7 @@ template_meta:
   has_memory: true
   trigger: trend_rising
   session_count_min: 4
-related_signals: [work_burnout]
+related_signals: [burnout]
 ```
 
 **模板：**
@@ -485,7 +485,7 @@ template_meta:
   has_memory: true
   trigger: persistent_5d
   session_count_min: 4
-related_signals: [identity_disturbance]
+related_signals: [identity_lost]
 ```
 
 **模板：**
@@ -506,7 +506,7 @@ template_meta:
   has_memory: true
   trigger: persistent_7d
   session_count_min: 4
-related_signals: [emptiness, meaning_crisis]
+related_signals: [emotional_numbness, meaning_loss]
 ```
 
 **模板：**

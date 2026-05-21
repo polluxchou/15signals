@@ -17,6 +17,9 @@ migrations/
 # 本地 Python 代理（已被 api/deepseek.js 替代）
 proxy.py
 
+# 本地 FastAPI 后端（生产走 api/session/close.js，本目录只用于本地开发）
+backend/
+
 # 旧 demo
 freud_demo.html
 
