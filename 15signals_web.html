@@ -639,6 +639,33 @@
     @media (max-width: 600px) {
       .ambient-anchor { right: 6%; bottom: 6%; }
       .thought-bubble { opacity: 0.78; }
+
+      /* 顶栏：压缩元素，避免左右两侧与中央 logo 重叠 / 溢出 */
+      .top-bar { height: 48px; }
+      .back-btn { left: 14px; letter-spacing: 0.12em; }
+      .key-area { right: 12px; gap: 8px; }
+      .key-btn { letter-spacing: 0.12em; }
+      /* 移动端隐藏信息性元素，仅保留可点击操作 */
+      .user-email,
+      .key-status { display: none !important; }
+
+      /* 导师选择：手机上横向排列会溢出屏幕（3×200 + 间距 ≈ 648px），改为纵向堆叠 */
+      .phil-cards {
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+        max-width: 320px;
+      }
+      .phil-card {
+        width: 100%;
+        padding: 22px 18px 18px;
+      }
+      .phil-card svg { width: 64px; height: 80px; margin-bottom: 12px; }
+      .select-body { gap: 32px; padding: 0 20px; }
+    }
+    /* 极窄屏（多按钮场景）：隐藏中央 logo，避免与两侧按钮重叠 */
+    @media (max-width: 420px) {
+      .logo { display: none; }
     }
 
     /* ══════════════════════════════
