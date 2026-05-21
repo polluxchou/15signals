@@ -1097,6 +1097,229 @@
       opacity: 0.6;
     }
 
+    /* ── 导入本地历史按钮 ── */
+    .history-import-btn {
+      display: block;
+      width: 100%;
+      margin: 0 0 32px;
+      padding: 14px 18px;
+      background: rgba(27,27,24,0.04);
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-light);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .history-import-btn:hover {
+      background: rgba(27,27,24,0.08);
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+    .history-import-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    /* ── Calendar ── */
+    .calendar { margin-bottom: 28px; }
+    .calendar-nav {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cal-label {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--ink);
+      letter-spacing: 0.04em;
+    }
+    .cal-nav-btn {
+      background: none;
+      border: none;
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 2px 10px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .cal-nav-btn:hover { color: var(--ink); }
+    .cal-nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+    .cal-weekdays, .cal-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .cal-weekdays {
+      padding: 14px 0 8px;
+    }
+    .cal-weekday {
+      font-family: 'EB Garamond', serif;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      text-align: center;
+    }
+    .cal-days {
+      gap: 2px 0;
+    }
+    .cal-day {
+      position: relative;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'EB Garamond', serif;
+      font-size: 14px;
+      color: var(--ink-faint);
+      cursor: default;
+      transition: color 0.15s, background 0.15s;
+      border-radius: 50%;
+      user-select: none;
+    }
+    .cal-day.in-month { color: var(--ink); }
+    .cal-day.has-sessions { cursor: pointer; }
+    .cal-day.has-sessions::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 18%;
+      transform: translateX(-50%);
+      width: 3px; height: 3px;
+      background: var(--ink);
+      border-radius: 50%;
+      opacity: 0.85;
+    }
+    .cal-day.has-sessions:hover {
+      background: rgba(27,27,24,0.06);
+    }
+    .cal-day.today {
+      outline: 1px solid var(--ink-faint);
+      outline-offset: -1px;
+    }
+    .cal-day.selected {
+      background: var(--ink);
+      color: var(--cream);
+    }
+    .cal-day.selected::after { background: var(--cream); }
+    .cal-day.future { color: rgba(27,27,24,0.18); }
+    .cal-day.future.has-sessions::after { display: none; }
+
+    /* ── 选中那天下方的信笺列表 ── */
+    .day-section {
+      margin-top: 36px;
+      min-height: 80px;
+    }
+    .day-section-header {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 17px;
+      color: var(--ink);
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+    .day-section-header .day-section-sub {
+      font-size: 12px;
+      color: var(--ink-faint);
+      margin-left: 10px;
+      letter-spacing: 0.06em;
+    }
+    .day-empty {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-faint);
+      opacity: 0.55;
+      text-align: center;
+      padding: 22px 0;
+    }
+
+    /* ── 信笺卡片 ── */
+    .letter {
+      position: relative;
+      background:
+        linear-gradient(180deg, #FAF7F0 0%, #F4F0E5 100%);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 28px 30px 22px;
+      margin-bottom: 18px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      box-shadow: 0 1px 2px rgba(27,27,24,0.04);
+    }
+    .letter:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(27,27,24,0.08);
+      border-color: var(--ink-faint);
+    }
+    /* 信笺右上的褪色"邮戳"，仅装饰 */
+    .letter::before {
+      content: '';
+      position: absolute;
+      top: 14px; right: 18px;
+      width: 22px; height: 22px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      opacity: 0.35;
+    }
+    .letter-time {
+      font-family: 'EB Garamond', serif;
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 12px;
+    }
+    .letter-body {
+      font-family: 'EB Garamond', serif;
+      font-size: 15px;
+      line-height: 1.66;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+      /* 折叠成两行 */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 18px;
+      min-height: 1em;
+    }
+    .letter-body.is-empty {
+      color: var(--ink-faint);
+      font-style: italic;
+    }
+    .letter-foot {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .letter-signature {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--ink-light);
+      letter-spacing: 0.04em;
+    }
+    .letter-meta {
+      font-family: 'EB Garamond', serif;
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .letter-meta .meta-sep { margin: 0 8px; opacity: 0.4; }
+
     /* ── sceneSelect 上的"我的复盘"入口 ── */
     .select-history-link {
       margin-top: 32px;
@@ -1255,6 +1478,7 @@
       <button class="submit-btn" id="submitBtn" aria-label="发送">↓</button>
     </div>
     <p class="dissolve-hint" id="dissolveHint">他在思量……</p>
+    <button class="end-btn" id="endBtnWriting">— 结束这段对话，做一次复盘</button>
   </div>
 </div>
 
@@ -1318,15 +1542,42 @@
   </div>
 </div>
 
-<!-- ══ Scene: History (我的复盘列表) ══ -->
+<!-- ══ Scene: History (日历 + 信笺) ══ -->
 <div class="scene" id="sceneHistory">
   <div class="history-col">
     <div class="history-heading">
-      <h2>我的复盘</h2>
-      <p>每一次结束，都是一次回声</p>
+      <h2>历程回望</h2>
+      <p>每一次对话，都是一封信</p>
     </div>
-    <div id="historyList"></div>
-    <p class="history-empty" id="historyEmpty" style="display:none">还没有任何复盘。结束一段对话后，它会出现在这里。</p>
+
+    <button id="importLocalBtn" class="history-import-btn" style="display:none"></button>
+
+    <div class="calendar">
+      <div class="calendar-nav">
+        <button id="calPrev" class="cal-nav-btn" aria-label="上一月">‹</button>
+        <span id="calLabel" class="cal-label"></span>
+        <button id="calNext" class="cal-nav-btn" aria-label="下一月">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span class="cal-weekday">日</span>
+        <span class="cal-weekday">一</span>
+        <span class="cal-weekday">二</span>
+        <span class="cal-weekday">三</span>
+        <span class="cal-weekday">四</span>
+        <span class="cal-weekday">五</span>
+        <span class="cal-weekday">六</span>
+      </div>
+      <div id="calDays" class="cal-days"></div>
+    </div>
+
+    <div class="day-section">
+      <div id="daySectionHeader" class="day-section-header"></div>
+      <div id="dayLetters"></div>
+      <p id="dayEmpty" class="day-empty" style="display:none">这一天没有对话</p>
+    </div>
+
+    <p class="history-empty" id="historyEmpty" style="display:none">还没有任何对话。聊上几句，它会出现在这里。</p>
+
     <div class="review-actions">
       <button class="review-action-btn primary" id="historyBackBtn">← 回到选择</button>
     </div>
@@ -1630,40 +1881,39 @@ function buildSystemPrompt(philKey) {
   const prompts = {
     freud: `你是西格蒙德·弗洛伊德（Sigmund Freud，1856–1939），精神分析学的创始人。你正在与一位用中文交谈的来访者进行私人会谈。
 
-对话方式：
-- 全程用中文。像真实对话：通常 1–3 句，偶尔只有一句，很少超过三句
-- 不急着给观点。对方说一句，你可以只回应一句，或只是反问澄清
-- "你说的'空虚'，是从什么时候开始的？"——这样的澄清，比"空虚是一种防御"更像你
-- 精神分析的视角藏在话里，不当面摊开。术语少用，意象多用
-- 不必每次都用问句收尾。有时一句陈述就够，有时甚至只是一个停顿
+回应要求：
+- 全程用中文，语言精炼、深邃、带有分析师的克制
+- 从精神分析视角解读（潜意识、欲望、防御机制、移情、早期经历）
+- 不急于给答案，而是揭示表面之下的隐藏动力
+- 每次回应 120–200 字，分 1–2 段
+- 以一个深入的反问或观察结尾，引导更深的自我探索
+- 语气：沉静、洞察、略带距离感，不表演，就是你自己
 
-你不是在讲课，是在听一个人说话。把对方往里带，不是把自己的体系搬出来。
-你不是在扮演弗洛伊德，你就是弗洛伊德。这是一次真实的会谈。`,
+你不是在扮演弗洛伊德，你就是弗洛伊德，这是一次真实的会谈。`,
 
     weber: `你是马克斯·韦伯（Max Weber，1864–1920），社会学家与政治经济学家。你正在与一位用中文交谈的人进行思想对话。
 
-对话方式：
-- 全程用中文。像真实交谈：通常 1–3 句，偶尔只有一句，很少超过三句
-- 不急着把对方放进结构里分析。先听他在说什么，再决定要不要把视角拉远
-- 概念不是用来教育对方的，是用来照亮某个具体瞬间的——能不出场就不出场
-- "你觉得这份工作让你成了谁？"——比"这是异化劳动"更像你
-- 你的悲悯藏在你的克制里。不安慰，但也不冷漠
-- 不必每次都用问句收尾——一句清醒的观察也可以是回应
+回应要求：
+- 全程用中文，语言严谨、清醒、带有历史感的厚重
+- 将个体处境置于更大的社会与历史结构中分析（理性化、祛魅、Beruf、铁笼、意义危机）
+- 不提供廉价安慰，帮助对方看清处境的本质
+- 每次回应 120–200 字，分 1–2 段
+- 以一个让对方审视自身价值取向的问题结尾
+- 语气：学术而悲悯，带着一种清醒的忧郁
 
-你不是来宣讲社会学的，是来陪一个现代人坐一会儿。把铁笼留在书里，对话留给当下。
-你不是在扮演韦伯，你就是韦伯。这是一次真实的思想对话。`,
+你不是在扮演韦伯，你就是韦伯，这是一次真实的思想对话。`,
 
     marx: `你是卡尔·马克思（Karl Marx，1818–1883），哲学家、经济学家、革命理论家。你正在与一位用中文交谈的人进行对话。
 
-对话方式：
-- 全程用中文。像真实交谈：通常 1–3 句，常常一句，最多两三句
-- 不要一上来就讲阶级、异化、意识形态。先问他在哪里——具体的处境、具体的关系、具体的工作
-- 你的批判锋芒留给系统；对人本身要温和
-- 概念偶尔出场，且必须落在他描述的具体处境里——抽象的术语没有意义
-- 不必每次都用问句收尾，但当问，要让对方重新看他自己
+回应要求：
+- 全程用中文，语言有力、深刻、带有批判的锋芒
+- 将个人苦痛与更广泛的社会矛盾联系（异化、劳动、物质条件、阶级意识、意识形态）
+- 批判指向结构，而非个人
+- 每次回应 120–200 字，分 1–2 段
+- 以一个让对方重新审视自身物质处境的问题结尾
+- 语气：充满激情但保持分析清醒，既有同情又有洞察
 
-你不是在写《资本论》，是在和一个人喝一杯酒。让对方先开口。
-你不是在扮演马克思，你就是马克思。这是一次真实的对话。`
+你不是在扮演马克思，你就是马克思，这是一次真实的对话。`
   };
 
   return prompts[philKey] + shared;
@@ -1973,6 +2223,18 @@ function setupWriting() {
   }
   // placeholder 永远是中性短提示，绝不回收哲学家的原话
   document.getElementById('userInput').placeholder = '回应……';
+
+  // 写字屏的"结束对话"入口：聊过至少 1 轮后才露出，避免首轮就给退出按钮
+  const endBtnW = document.getElementById('endBtnWriting');
+  if (endBtnW) {
+    if (sessionCount >= 1) {
+      endBtnW.style.transition = 'opacity 0.9s ease 0.4s';
+      endBtnW.style.opacity = '0.7';
+    } else {
+      endBtnW.style.transition = 'none';
+      endBtnW.style.opacity = '0';
+    }
+  }
 }
 
 const input     = document.getElementById('userInput');
@@ -2537,43 +2799,357 @@ function renderTranscript() {
 }
 
 /* ── 渲染 sceneHistory ── */
-function renderHistoryList() {
-  const log = loadReviewLog();
-  const listBox = document.getElementById('historyList');
+/* ══════════════════════════════════════════════════════
+   sceneHistory：日历 + 信笺
+   数据来源：/api/session/list（按 last_active_at 降序）
+   分组依据：用户本地时区下的日期（YYYY-MM-DD）
+══════════════════════════════════════════════════════ */
+const WEEKDAY_LABELS = ['日','一','二','三','四','五','六'];
+
+let _sessionsCache = [];          // 当前用户所有 sessions（按日期分组前）
+let _sessionsByDay = new Map();   // dayKey 'YYYY-MM-DD' -> [session, ...]
+let _calCursor = null;            // 当前月历光标，月初的 Date（本地时区）
+let _selectedDay = null;          // 'YYYY-MM-DD'
+
+function localDayKey(iso) {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function formatDayHeader(dayKey) {
+  const [y, m, d] = dayKey.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${m} 月 ${d} 日 · 周${WEEKDAY_LABELS[dt.getDay()]}`;
+}
+
+async function renderHistoryList() {
   const emptyEl = document.getElementById('historyEmpty');
-  if (log.length === 0) {
-    listBox.innerHTML = '';
+  const calendarEl = document.querySelector('#sceneHistory .calendar');
+  const daySectionEl = document.querySelector('#sceneHistory .day-section');
+
+  // 1) 拉服务端列表
+  try {
+    const { sessions } = await apiGet('/api/session/list?limit=500');
+    _sessionsCache = sessions || [];
+  } catch (err) {
+    console.warn('[history] list failed, 回退到本地复盘日志', err);
+    _sessionsCache = loadReviewLog().map(r => ({
+      id: `local-${r.created_at}-${r.mentor_id}`,
+      mentor_id: r.mentor_id,
+      started_at: r.created_at,
+      last_active_at: r.created_at,
+      status: 'closed_by_user',
+      turn_count: Array.isArray(r.messages) ? r.messages.length : 0,
+      has_summary: true,
+      summary_pretty: r.overall_text || r.title || null,
+      _local_review: r,
+    }));
+  }
+
+  // 2) 按本地日期分组
+  _sessionsByDay = new Map();
+  for (const s of _sessionsCache) {
+    const k = localDayKey(s.last_active_at);
+    if (!_sessionsByDay.has(k)) _sessionsByDay.set(k, []);
+    _sessionsByDay.get(k).push(s);
+  }
+
+  // 3) 全空：只显示导入按钮（如有），日历隐藏
+  if (_sessionsCache.length === 0) {
+    emptyEl.style.display = 'block';
+    calendarEl.style.display = 'none';
+    daySectionEl.style.display = 'none';
+    await maybeOfferImport();
+    return;
+  }
+  emptyEl.style.display = 'none';
+  calendarEl.style.display = '';
+  daySectionEl.style.display = '';
+
+  // 4) 默认光标 = 最近一次对话所在月；默认选中那天
+  if (!_calCursor) {
+    const latest = new Date(_sessionsCache[0].last_active_at);
+    _calCursor = new Date(latest.getFullYear(), latest.getMonth(), 1);
+  }
+  if (!_selectedDay) {
+    _selectedDay = localDayKey(_sessionsCache[0].last_active_at);
+  }
+
+  renderCalendar();
+  renderDayLetters();
+  await maybeOfferImport();
+}
+
+function renderCalendar() {
+  const label = document.getElementById('calLabel');
+  const grid  = document.getElementById('calDays');
+  const year  = _calCursor.getFullYear();
+  const month = _calCursor.getMonth();
+
+  label.textContent = `${year} 年 ${month + 1} 月`;
+
+  const first = new Date(year, month, 1);
+  const offset = first.getDay();
+  const gridStart = new Date(year, month, 1 - offset);
+
+  const todayKey = localDayKey(new Date().toISOString());
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+    const k = localDayKey(d.toISOString());
+    const inMonth = d.getMonth() === month;
+    const isFuture = k > todayKey;
+    const hasSessions = _sessionsByDay.has(k);
+    const isToday = k === todayKey;
+    const isSelected = k === _selectedDay;
+
+    const classes = ['cal-day'];
+    if (inMonth) classes.push('in-month');
+    if (isFuture) classes.push('future');
+    if (hasSessions && !isFuture) classes.push('has-sessions');
+    if (isToday) classes.push('today');
+    if (isSelected) classes.push('selected');
+
+    cells.push(`<div class="${classes.join(' ')}" data-day="${k}">${d.getDate()}</div>`);
+  }
+  grid.innerHTML = cells.join('');
+
+  grid.querySelectorAll('.cal-day.has-sessions').forEach(el => {
+    el.addEventListener('click', () => {
+      _selectedDay = el.dataset.day;
+      const [y, m] = _selectedDay.split('-').map(Number);
+      if (y !== _calCursor.getFullYear() || (m - 1) !== _calCursor.getMonth()) {
+        _calCursor = new Date(y, m - 1, 1);
+      }
+      renderCalendar();
+      renderDayLetters();
+    });
+  });
+}
+
+function renderDayLetters() {
+  const headerEl = document.getElementById('daySectionHeader');
+  const listEl   = document.getElementById('dayLetters');
+  const emptyEl  = document.getElementById('dayEmpty');
+
+  if (!_selectedDay) {
+    headerEl.textContent = '';
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'none';
+    return;
+  }
+
+  const items = (_sessionsByDay.get(_selectedDay) || [])
+    .slice().sort((a, b) => new Date(b.last_active_at) - new Date(a.last_active_at));
+
+  headerEl.innerHTML = `${formatDayHeader(_selectedDay)}
+    <span class="day-section-sub">${items.length} 封信</span>`;
+
+  if (items.length === 0) {
+    listEl.innerHTML = '';
     emptyEl.style.display = 'block';
     return;
   }
   emptyEl.style.display = 'none';
-  listBox.innerHTML = log.map((r, idx) => {
-    const d = P[r.mentor_id] || {};
-    const topSig = (r.top_signals || [])[0];
-    const topName = topSig ? (topSig.display_name_zh || topSig.signal_name) : '—';
-    return `<div class="history-item" data-idx="${idx}">
-      <span class="history-item-date">${formatReviewDate(r.created_at)}</span>
-      <div class="history-item-body">
-        <div class="history-item-title">${escapeHtml(r.title || '一次回声')}</div>
-        <div class="history-item-meta">
-          ${d.short || r.mentor_id}<span class="meta-sep">·</span>${topName}
-        </div>
+
+  listEl.innerHTML = items.map((s, idx) => {
+    const d = P[s.mentor_id] || {};
+    const time = formatTime(s.last_active_at);
+    const bodyText = s.summary_pretty
+      ? escapeHtml(s.summary_pretty)
+      : '<span>对话已记录，点开阅读</span>';
+    const turnCount = s.turn_count ?? 0;
+    const statusNote = s.status === 'active' ? '进行中' : `${turnCount} 轮`;
+
+    return `<div class="letter" data-idx="${idx}">
+      <div class="letter-time">${time}</div>
+      <div class="letter-body ${s.summary_pretty ? '' : 'is-empty'}">${bodyText}</div>
+      <div class="letter-foot">
+        <span class="letter-signature">— ${escapeHtml(d.short || s.mentor_id)}</span>
+        <span class="letter-meta">${statusNote}</span>
       </div>
-      <span class="history-item-intensity">${r.overall_intensity ?? 0}</span>
     </div>`;
   }).join('');
 
-  // 绑定点击
-  listBox.querySelectorAll('.history-item').forEach(el => {
+  listEl.querySelectorAll('.letter').forEach(el => {
     el.addEventListener('click', async () => {
       const idx = parseInt(el.dataset.idx, 10);
-      const r = loadReviewLog()[idx];
-      if (!r) return;
-      renderReview(r);
-      await go('sceneReview', 500);
+      const s = items[idx];
+      await openLetter(s);
     });
   });
 }
+
+async function openLetter(session) {
+  // 本地兜底的复盘直接走旧 renderReview
+  if (session._local_review) {
+    renderReview(session._local_review);
+    await go('sceneReview', 500);
+    return;
+  }
+  // 服务端拉 turns，按是否有 summary 决定进 sceneReview 还是 sceneTranscript
+  try {
+    const data = await apiGet(`/api/session/turns?session_id=${session.id}`);
+    const messages = (data.turns || []).map(t => ({
+      role: t.role === 'mentor' ? 'assistant' : t.role,
+      content: t.content,
+    }));
+    currentReview = {
+      mentor_id:  data.session.mentor_id,
+      created_at: data.session.last_active_at,
+      messages,
+      title: null,
+      ...(data.session.summary || {}),
+    };
+    if (data.session.summary) {
+      renderReview(currentReview);
+      await go('sceneReview', 500);
+    } else {
+      renderTranscript();
+      await go('sceneTranscript', 500);
+    }
+  } catch (err) {
+    console.error('[history] openLetter failed', err);
+    alert('未能打开这封信，请稍后再试');
+  }
+}
+
+/* 月历翻页 */
+document.getElementById('calPrev').addEventListener('click', () => {
+  if (!_calCursor) return;
+  _calCursor = new Date(_calCursor.getFullYear(), _calCursor.getMonth() - 1, 1);
+  renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  if (!_calCursor) return;
+  const next = new Date(_calCursor.getFullYear(), _calCursor.getMonth() + 1, 1);
+  const today = new Date();
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  if (next > thisMonth) return;
+  _calCursor = next;
+  renderCalendar();
+});
+
+/* ══════════════════════════════════════════════════════
+   一次性：导入本地 localStorage 历史到 Supabase
+══════════════════════════════════════════════════════ */
+const IMPORT_FLAG_KEY = 'local_imported_v1';
+
+function localHistoryDigest() {
+  const mentors = ['freud', 'weber', 'marx'];
+  let convCount = 0, reviewCount = 0;
+  for (const k of mentors) {
+    try {
+      const arr = JSON.parse(localStorage.getItem(`conv_${k}`) || '[]');
+      if (Array.isArray(arr) && arr.length >= 2) convCount += 1;
+    } catch (_) {}
+  }
+  try {
+    const log = JSON.parse(localStorage.getItem('reviews_log') || '[]');
+    if (Array.isArray(log)) reviewCount = log.length;
+  } catch (_) {}
+  return { convCount, reviewCount, total: convCount + reviewCount };
+}
+
+async function maybeOfferImport() {
+  const btn = document.getElementById('importLocalBtn');
+  if (!btn) return;
+  if (localStorage.getItem(IMPORT_FLAG_KEY) === '1') {
+    btn.style.display = 'none';
+    return;
+  }
+  const { convCount, reviewCount, total } = localHistoryDigest();
+  if (total === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+  const bits = [];
+  if (reviewCount > 0) bits.push(`${reviewCount} 段复盘`);
+  if (convCount > 0)   bits.push(`${convCount} 段本地对话`);
+  btn.textContent = `↑ 把本地的 ${bits.join(' + ')} 导入到云端`;
+  btn.style.display = '';
+}
+
+function buildImportPayload() {
+  const sessions = [];
+  try {
+    const log = JSON.parse(localStorage.getItem('reviews_log') || '[]');
+    for (const r of log) {
+      if (!Array.isArray(r.messages) || r.messages.length < 2) continue;
+      if (!r.mentor_id) continue;
+      const { messages, mentor_id, created_at, ...summary } = r;
+      sessions.push({
+        mentor_id,
+        started_at:     created_at,
+        last_active_at: created_at,
+        closed_at:      created_at,
+        summary,
+        turns: messages.map(m => ({
+          role: m.role === 'assistant' ? 'mentor' : m.role,
+          content: m.content,
+        })),
+      });
+    }
+  } catch (_) {}
+
+  for (const k of ['freud', 'weber', 'marx']) {
+    try {
+      const arr = JSON.parse(localStorage.getItem(`conv_${k}`) || '[]');
+      if (!Array.isArray(arr) || arr.length < 2) continue;
+      const now = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      sessions.push({
+        mentor_id: k,
+        started_at:     now,
+        last_active_at: now,
+        closed_at:      now,
+        turns: arr.map(m => ({
+          role: m.role === 'assistant' ? 'mentor' : m.role,
+          content: m.content,
+        })),
+      });
+    } catch (_) {}
+  }
+
+  return sessions;
+}
+
+document.getElementById('importLocalBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('importLocalBtn');
+  const sessions = buildImportPayload();
+  if (sessions.length === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+  if (!confirm(`要把这台设备上的 ${sessions.length} 段对话导入云端吗？\n（只会做一次；导入后本地仍保留作离线备份）`)) {
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '正在导入……';
+  try {
+    const result = await apiPost('/api/session/import', { sessions });
+    localStorage.setItem(IMPORT_FLAG_KEY, '1');
+    btn.style.display = 'none';
+    _sessionsCache = [];
+    _sessionsByDay = new Map();
+    _calCursor = null;
+    _selectedDay = null;
+    await renderHistoryList();
+    alert(`已导入 ${result.imported} 段对话`);
+  } catch (err) {
+    console.error('[import] failed', err);
+    btn.disabled = false;
+    btn.textContent = '导入失败 · 点击重试';
+    alert('导入失败：' + (err?.message || '请稍后再试'));
+  }
+});
 
 /* ══════════════════════════════════════════════════════
    END SESSION → 生成复盘
@@ -2638,6 +3214,7 @@ async function endSessionAndReview() {
    REVIEW SCENE BUTTONS
 ══════════════════════════════════════════════════════ */
 document.getElementById('endBtn').addEventListener('click', endSessionAndReview);
+document.getElementById('endBtnWriting').addEventListener('click', endSessionAndReview);
 
 document.getElementById('viewTranscriptBtn').addEventListener('click', async () => {
   renderTranscript();
@@ -2648,16 +3225,16 @@ document.getElementById('backToReviewBtn').addEventListener('click', async () =>
 });
 
 document.getElementById('viewHistoryBtn').addEventListener('click', async () => {
+  await go('sceneHistory', 500);   // 先切场景，下面再渲染（数据可能花几百 ms）
   renderHistoryList();
-  await go('sceneHistory', 500);
 });
 document.getElementById('historyBackBtn').addEventListener('click', async () => {
   document.getElementById('backBtn').style.display = 'none';
   await go('sceneSelect', 500);
 });
 document.getElementById('selectHistoryLink').addEventListener('click', async () => {
-  renderHistoryList();
   await go('sceneHistory', 500);
+  renderHistoryList();
 });
 
 document.getElementById('newSessionBtn').addEventListener('click', async () => {
