@@ -7,3 +7,7 @@ pydantic>=2.5
 openai>=1.40              # DeepSeek 走 OpenAI 兼容协议
 python-dotenv>=1.0
 psycopg[binary,pool]>=3.1 # 可选：DB 持久化用；没配 DATABASE_URL 时跳过
+
+# P1 新增：状态化对话的 RAG 检索 + 嵌入
+pgvector>=0.3             # session/turn 端点检索 mentor_kb_chunks 用
+voyageai>=0.2.4,<0.3      # session/turn 端点给用户输入嵌入用

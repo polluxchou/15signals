@@ -31,6 +31,22 @@
 
 BEGIN;
 
+-- ----- 0. 幂等守卫：如果已经迁移过，明确报错并停止 -----
+-- signal_meta 是本 migration 新建的表，它的存在 == migration 002 已经成功跑完。
+-- 如果你看到下面这条 NOTICE / EXCEPTION，说明你不需要再跑这个 migration——
+-- 数据库已经是 rubric-v0.2 了。
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = current_schema() AND table_name = 'signal_meta'
+    ) THEN
+        RAISE EXCEPTION
+            'Migration 002 already applied (signal_meta exists). Nothing to do. '
+            'If you really want to re-run, manually DROP signal_meta first.';
+    END IF;
+END $$;
+
 -- ----- 1. 归档旧 signal_scores -----
 ALTER TABLE IF EXISTS signal_scores
     RENAME TO signal_scores_v01_archive;

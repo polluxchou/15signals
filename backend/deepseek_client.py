@@ -32,6 +32,52 @@ def get_model_scorer() -> str:
     return os.environ.get("DEEPSEEK_MODEL_SCORER", "deepseek-chat")
 
 
+def get_model_mentor() -> str:
+    return os.environ.get("DEEPSEEK_MODEL_MENTOR", "deepseek-chat")
+
+
+def call_mentor_response(
+    system_prompt: str,
+    messages: list[dict],
+    temperature: float = 0.7,
+    max_tokens: int = 600,
+) -> str:
+    """
+    调 DeepSeek 生成导师回应（自由文本，非 JSON）。
+
+    Args:
+        system_prompt: build_mentor_response_system_prompt() 的输出
+        messages: build_mentor_response_messages() 的输出（user/assistant 交替）
+        temperature: 主对话用 0.6–0.8，比 summary 略高，允许文学性发挥
+        max_tokens: 600 足够 3–6 句中文回应
+
+    Returns:
+        导师回应文本（已 strip）。
+    """
+    client = get_client()
+    model = get_model_mentor()
+
+    full_messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    full_messages.extend(messages)
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=full_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=False,  # P1 先不上 streaming，后续改 stream=True
+        )
+        text = (resp.choices[0].message.content or "").strip()
+        if not text:
+            raise DeepSeekError("DeepSeek returned empty response")
+        return text
+    except Exception as e:
+        if isinstance(e, DeepSeekError):
+            raise
+        raise DeepSeekError(f"call_mentor_response failed: {type(e).__name__}: {e}") from e
+
+
 def call_summary(system_prompt: str, user_message: str, max_retries: int = 2) -> dict[str, Any]:
     """
     调 DeepSeek 生成复盘 JSON。
