@@ -1,0 +1,9 @@
+# 15 Signals backend (FastAPI)
+# 安装：pip install -r requirements.txt
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5
+openai>=1.40              # DeepSeek 走 OpenAI 兼容协议
+python-dotenv>=1.0
+psycopg[binary,pool]>=3.1 # 可选：DB 持久化用；没配 DATABASE_URL 时跳过

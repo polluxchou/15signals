@@ -1,0 +1,9 @@
+# 依赖：ingest_kb.py
+# 安装：pip install -r requirements.txt
+
+psycopg[binary]>=3.1
+pgvector>=0.3
+voyageai>=0.2.4,<0.3
+openai>=1.40            # DeepSeek 走 OpenAI 兼容协议
+PyYAML>=6.0
+python-dotenv>=1.0

@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>15 Signals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:     #F6F3EC;
+      --ink:       #1B1B18;
+      --ink-light: #5C5C52;
+      --ink-faint: #9C9C8E;
+      --border:    #D2CEC2;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--cream);
+      font-family: 'EB Garamond', Georgia, serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "liga" 1, "kern" 1;
+    }
+
+    /* ── Scene system ── */
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ── Global header strip ── */
+    .top-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 10px;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .back-btn {
+      position: absolute;
+      left: 28px;
+      font-family: 'EB Garamond', serif;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      pointer-events: auto;
+      transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--ink); }
+
+    /* ══════════════════════════════
+       SCENE: SELECT
+    ══════════════════════════════ */
+    /* #sceneSelect initial state set via JS */
+
+    .select-body {
+      margin-top: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 44px;
+    }
+    .select-heading {
+      text-align: center;
+    }
+    .select-heading h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 10px;
+    }
+    .select-heading p {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 21px;
+      color: var(--ink-light);
+    }
+
+    .phil-cards {
+      display: flex;
+      gap: 24px;
+    }
+    .phil-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 200px;
+      padding: 28px 18px 22px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      text-align: center;
+      background: transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .phil-card:hover { border-color: var(--ink); background: rgba(27,27,24,0.025); }
+    .phil-card svg { width: 80px; height: 100px; margin-bottom: 16px; }
+    .phil-name {
+      font-family: 'Playfair Display', serif;
+      font-weight: 900;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    .phil-years {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 12px;
+    }
+    .phil-rule { width: 18px; height: 1px; background: var(--border); margin: 0 auto 12px; }
+    .phil-tagline {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--ink-light);
+    }
+
+    /* ══════════════════════════════
+       SCENE: DAILY OPENING（每日开场：抽象图 + 联想）
+       —— 替换旧的 SIGNAL REVEAL 屏。旧类名 .signal-* 暂留以兼容。
+    ══════════════════════════════ */
+    #sceneSignal { gap: 0; justify-content: center; }
+    .daily-col {
+      max-width: 480px;
+    }
+    .daily-date {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 11.5px;
+      color: var(--ink-faint);
+      letter-spacing: 0.08em;
+      margin-bottom: 26px;
+      text-align: left;
+    }
+    .daily-image {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 36px;
+    }
+    .daily-image svg {
+      width: 220px;
+      height: auto;
+      display: block;
+      opacity: 0;
+      animation: dailyFadeIn 1.6s cubic-bezier(0, 0, 0.25, 1) 0.3s forwards;
+    }
+    .daily-prompt {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 19px;
+      line-height: 1.55;
+      color: var(--ink);
+      margin: 0 0 22px;
+      text-align: left;
+      opacity: 0;
+      animation: dailyFadeIn 1.2s cubic-bezier(0, 0, 0.25, 1) 1.0s forwards;
+    }
+    .daily-col textarea {
+      opacity: 0;
+      animation: dailyFadeIn 0.9s cubic-bezier(0, 0, 0.25, 1) 1.6s forwards;
+    }
+    .daily-col .write-footer {
+      opacity: 0;
+      animation: dailyFadeIn 0.9s cubic-bezier(0, 0, 0.25, 1) 1.9s forwards;
+    }
+    @keyframes dailyFadeIn { to { opacity: 1; } }
+
+    /* —— 旧的 SIGNAL REVEAL 类名（保留以备引用） —— */
+    .signal-label {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 40px;
+    }
+    .signal-list { display: none; }
+    .signal-tag  { display: none; }
+
+    /* ══════════════════════════════
+       SHARED: DIALOGUE COLUMN
+    ══════════════════════════════ */
+    .dialogue-col {
+      width: 100%;
+      max-width: 540px;
+      padding: 0 40px;
+      display: flex;
+      flex-direction: column;
+    }
+    .attr-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 26px;
+    }
+    .attr-thumb { width: 24px; height: 30px; flex-shrink: 0; opacity: 0.55; }
+    .attr-name {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+    .attr-count {
+      margin-left: auto;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--ink-faint);
+    }
+
+    /* ══════════════════════════════
+       SCENE: GREETING
+    ══════════════════════════════ */
+    .greeting-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 23px;
+      line-height: 1.82;
+      color: var(--ink-light);
+      white-space: pre-line;
+    }
+    .start-btn {
+      margin-top: 38px;
+      background: none; border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 6px 0;
+      opacity: 0;
+      transition: color 0.15s;
+      animation: pulse 2.6s ease-in-out infinite;
+      align-self: flex-start;
+    }
+    .start-btn:hover { color: var(--ink); }
+    @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.85} }
+
+    /* ══════════════════════════════
+       SCENE: WRITING
+    ══════════════════════════════ */
+    #sceneWriting .dialogue-col { justify-content: center; }
+    .prev-msg {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 17.5px;
+      line-height: 1.68;
+      color: var(--ink);
+      opacity: 0.28;
+      margin-bottom: 30px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 0 0 12px;
+      font-family: 'EB Garamond', serif;
+      font-size: 25px;
+      line-height: 1.72;
+      color: var(--ink);
+      resize: none; outline: none;
+      caret-color: var(--ink);
+      overflow: hidden;
+      min-height: 50px;
+    }
+    textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+    textarea:disabled { opacity: 1; }
+    .write-footer {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .write-hint { font-size: 10.5px; font-style: italic; color: var(--ink-faint); }
+
+    /* 听写状态指示 */
+    .dict-indicator {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .dict-indicator.active { opacity: 1; }
+    .dict-label {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 12px;
+      color: var(--ink-faint);
+      letter-spacing: 0.04em;
+    }
+    /* 听写时输入框底线呼吸 */
+    @keyframes borderBreath {
+      0%, 100% { border-bottom-color: var(--border); }
+      50%       { border-bottom-color: var(--ink-light); }
+    }
+    textarea.dictating {
+      animation: borderBreath 1.4s ease-in-out infinite;
+    }
+    .dissolve-hint {
+      margin-top: 28px;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      color: var(--ink-faint);
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      align-self: flex-start;
+    }
+    /* 长按发送：1.5 秒填充才触发；中途松手则缓慢回落 */
+    .submit-btn {
+      position: relative;
+      overflow: hidden;
+      font-family: 'EB Garamond', serif;
+      font-size: 15px;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--ink);
+      padding: 10px 22px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      transition: opacity 0.3s ease, border-color 0.3s ease;
+    }
+    /* 上升的"墨水"——按下时从底部慢慢沉满 */
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 0;
+      background: var(--ink);
+      transition: height 420ms cubic-bezier(0.4, 0, 0.6, 1);
+      pointer-events: none;
+    }
+    .submit-btn.pressing::before {
+      height: 100%;
+      transition: height 1500ms linear;
+    }
+    /* 按钮里的字（↓）随墨水上升从 ink 转为 cream */
+    .submit-btn .submit-label {
+      position: relative;
+      z-index: 1;
+      display: inline-block;
+      transition: color 420ms cubic-bezier(0.4, 0, 0.6, 1);
+    }
+    .submit-btn.pressing .submit-label {
+      color: var(--cream);
+      transition: color 1500ms linear;
+    }
+    .submit-btn:disabled {
+      opacity: 0.18;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════
+       SCENE: THINKING
+    ══════════════════════════════ */
+    #sceneThinking { gap: 0; }
+    .dots { display: flex; gap: 8px; align-items: center; }
+    .dots i {
+      display: block; width: 5px; height: 5px;
+      border-radius: 50%; background: var(--ink-faint);
+      animation: breathe 1.6s ease-in-out infinite;
+    }
+    .dots i:nth-child(2) { animation-delay: 0.22s; }
+    .dots i:nth-child(3) { animation-delay: 0.44s; }
+    @keyframes breathe { 0%,100%{opacity:0.2;transform:scale(0.85)} 50%{opacity:1;transform:scale(1.15)} }
+
+    /* ══════════════════════════════
+       SCENE: RESPONSE
+    ══════════════════════════════ */
+    .resp-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 22px;
+      line-height: 1.86;
+      color: var(--ink-light);
+      white-space: pre-line;
+      max-height: 48vh;
+      overflow: hidden;
+    }
+    .resp-more-hint {
+      margin-top: 28px;
+      background: none; border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 4px 0;
+      opacity: 0;
+      transition: opacity 0.7s ease, color 0.15s;
+      align-self: flex-start;
+    }
+    .resp-more-hint:hover { color: var(--ink); }
+    .reply-btn {
+      margin-top: 36px;
+      background: none; border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 10.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 6px 0;
+      opacity: 0;
+      transition: color 0.15s;
+      align-self: flex-start;
+    }
+    .reply-btn:hover { color: var(--ink); }
+
+    /* ── API Key area ── */
+    .key-area {
+      position: absolute;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+    .key-status {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--ink-faint);
+    }
+    .key-btn {
+      font-family: 'EB Garamond', serif;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .key-btn:hover { color: var(--ink); }
+
+    .user-email {
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--ink-faint);
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════
+       SCENE: AUTH
+    ══════════════════════════════ */
+    #sceneAuth .auth-body {
+      width: 360px;
+      max-width: 88vw;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 28px;
+    }
+    .auth-heading { text-align: center; }
+    .auth-heading h2 {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 26px;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .auth-heading p {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 14px;
+      color: var(--ink-light);
+      letter-spacing: 0.04em;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .auth-form input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      font-family: 'EB Garamond', serif;
+      font-size: 16px;
+      color: var(--ink);
+      outline: none;
+      letter-spacing: 0.04em;
+      transition: border-color 0.2s;
+    }
+    .auth-form input::placeholder { color: var(--ink-faint); }
+    .auth-form input:focus { border-bottom-color: var(--ink); }
+    .auth-submit {
+      margin-top: 12px;
+      font-family: 'EB Garamond', serif;
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--ink);
+      padding: 10px 0;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+    .auth-submit:hover { background: var(--ink); color: var(--cream); }
+    .auth-submit:disabled { opacity: 0.4; cursor: default; }
+    .auth-submit:disabled:hover { background: transparent; color: var(--ink); }
+    .auth-toggle {
+      align-self: center;
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-faint);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .auth-toggle:hover { color: var(--ink); }
+    .auth-error {
+      font-family: 'EB Garamond', serif;
+      font-size: 13px;
+      color: #8B3A3A;
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+    .auth-note {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-light);
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+
+    /* ══════════════════════════════
+       AMBIENT SMOKE
+    ══════════════════════════════ */
+    .ambient-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /*
+      燃香烟雾：从一个点缓慢升起，左右不规则摇摆，
+      越升越散（scaleX 扩张），越散越模糊，最终消隐。
+      translateX 故意用不对称的值，避免机械感。
+    */
+    /*
+      烟雾：从小圆点升起，整体向四周膨胀扩散，
+      越升越大越模糊，最终消散。
+      用 scale(x,y) 双向膨胀而不是 scaleX，
+      这样才像雾气，不像拉伸的线条。
+    */
+    @keyframes smokeRise {
+      0%   { opacity: 0;    transform: translate(  0px,   0px) scale(1.0, 1.0); filter: blur(1px);   }
+      12%  { opacity: 0.38; transform: translate(  3px, -10px) scale(1.4, 1.6); filter: blur(2px);   }
+      30%  { opacity: 0.34; transform: translate( -5px, -22px) scale(2.2, 2.4); filter: blur(3px);   }
+      52%  { opacity: 0.22; transform: translate(  4px, -35px) scale(3.2, 3.0); filter: blur(4px);   }
+      75%  { opacity: 0.09; transform: translate( -2px, -47px) scale(4.2, 3.6); filter: blur(5px);   }
+      100% { opacity: 0;    transform: translate(  1px, -58px) scale(5.0, 4.2); filter: blur(6px);   }
+    }
+
+    .amb {
+      position: absolute;
+      opacity: 0;
+      animation-name: smokeRise;
+      animation-iteration-count: infinite;
+      animation-fill-mode: backwards;
+      animation-timing-function: ease-out;
+    }
+
+    /* 起点：小椭圆，像一粒烟的源点 */
+    .amb-smoke {
+      width: 5px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ink);
+      transform-origin: center center;
+    }
+
+    /* ── "想法的气泡"——内省产品的视觉锚 ──
+       上方一团缓慢升起的雾（amb-smoke 粒子）= 想法本身
+       下方由大到小的几颗气泡 = 朝观者方向收的"想法痕迹"
+       不画任何具体物件——气泡的语言不需要落地。 */
+    .ambient-anchor {
+      position: absolute;
+      right: 9%;
+      bottom: 8%;
+      width: 1px;
+      height: 1px;
+    }
+    .thought-bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(92, 92, 82, 0.26) 0%,
+        rgba(92, 92, 82, 0.08) 60%,
+        rgba(92, 92, 82, 0) 100%);
+      pointer-events: none;
+      animation: bubbleBreath 6.4s ease-in-out infinite;
+    }
+    /* 三颗气泡：从近（大）到远（小），向下偏移
+       —— 近端紧贴雾的下沿，远端淡入空无 */
+    .bubble-near { width: 13px; height: 13px; left: -6.5px; bottom: 4px;   }
+    .bubble-mid  { width: 9px;  height: 9px;  left: -4.5px; bottom: -10px; animation-delay: 1.6s; }
+    .bubble-far  { width: 5px;  height: 5px;  left: -2.5px; bottom: -22px; animation-delay: 3.2s; }
+    @keyframes bubbleBreath {
+      0%, 100% { opacity: 0.85; transform: scale(1);    }
+      50%      { opacity: 1.00; transform: scale(1.06); }
+    }
+    /* 小屏时再压低一档 */
+    @media (max-width: 600px) {
+      .ambient-anchor { right: 6%; bottom: 6%; }
+      .thought-bubble { opacity: 0.78; }
+    }
+
+    /* ══════════════════════════════
+       HISTORY OVERLAY
+    ══════════════════════════════ */
+    #histOverlay {
+      position: fixed;
+      inset: 0;
+      background: var(--cream);
+      z-index: 50;
+      overflow-y: auto;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.38s ease;
+    }
+    .hist-inner {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 88px 40px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .hist-header {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .hist-exchange {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding-bottom: 28px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hist-exchange:last-of-type { border-bottom: none; }
+    .hist-msg-user {
+      font-family: 'EB Garamond', serif;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--ink);
+      opacity: 0.28;
+    }
+    .hist-msg-phil {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 17px;
+      line-height: 1.78;
+      color: var(--ink-light);
+      opacity: 0.55;
+      white-space: pre-line;
+    }
+    .hist-close-hint {
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      opacity: 0.45;
+      margin-top: 8px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ══ Ambient: "想法的气泡" ══
+     上方一团慢慢升起、消散的雾 = 想法本身；
+     下方三颗由大到小的气泡 = 朝观者方向收的痕迹。
+     不画器物，不写台词——纯视觉的"内省"暗号。 -->
+<div class="ambient-layer" aria-hidden="true">
+  <div class="ambient-anchor">
+    <!-- 想法的痕迹：三颗由大到小、由近到远的气泡 -->
+    <div class="thought-bubble bubble-near"></div>
+    <div class="thought-bubble bubble-mid"></div>
+    <div class="thought-bubble bubble-far"></div>
+    <!-- 上方雾：4 缕慢升、扩散、化空——"想法本身"
+         （bottom 范围 12–18px，紧贴 bubble-near 上沿之上） -->
+    <div class="amb amb-smoke" style="left:-2.5px; bottom:14px; animation-duration:11.4s; animation-delay:0.0s;"></div>
+    <div class="amb amb-smoke" style="left:-3.5px; bottom:18px; animation-duration:13.2s; animation-delay:3.6s;"></div>
+    <div class="amb amb-smoke" style="left:-1.5px; bottom:12px; animation-duration:10.6s; animation-delay:6.8s;"></div>
+    <div class="amb amb-smoke" style="left:-2.5px; bottom:16px; animation-duration:12.0s; animation-delay:9.5s;"></div>
+  </div>
+</div>
+
+<!-- Global top bar -->
+<div class="top-bar">
+  <button class="back-btn" id="backBtn" style="display:none">← 重新选择</button>
+  <span class="logo">15 Signals</span>
+  <div class="key-area" id="keyArea">
+    <span class="user-email" id="userEmail" style="display:none"></span>
+    <span class="key-status" id="keyStatus"></span>
+    <button class="key-btn" id="clearMemBtn" style="display:none">清除记忆</button>
+    <button class="key-btn" id="keyBtn" style="display:none">设置 Key</button>
+    <button class="key-btn" id="signOutBtn" style="display:none">登出</button>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div id="keyModal" style="display:none;position:fixed;inset:0;background:rgba(246,243,236,0.96);z-index:100;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <p style="font-family:'EB Garamond',serif;font-size:13px;letter-spacing:0.12em;color:var(--ink-light)">输入你的 DeepSeek API Key</p>
+  <input id="keyInput" type="password" placeholder="完整粘贴你的 Key（格式：sk-xxxxx）" autocomplete="off"
+    style="width:320px;background:transparent;border:none;border-bottom:1px solid var(--border);padding:8px 0;font-family:'EB Garamond',serif;font-size:17px;color:var(--ink);outline:none;text-align:center;letter-spacing:0.06em">
+  <button id="keySaveBtn" style="margin-top:8px;font-family:'EB Garamond',serif;font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink);background:transparent;border:1px solid var(--ink);padding:8px 20px;cursor:pointer">确认</button>
+  <button id="keyCancelBtn" style="font-family:'EB Garamond',serif;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-faint);background:none;border:none;cursor:pointer;padding:4px 0">取消</button>
+</div>
+
+<!-- ══ Scene: Auth ══ -->
+<div class="scene" id="sceneAuth">
+  <div class="auth-body">
+    <div class="auth-heading">
+      <h2 id="authTitle">回到对话</h2>
+      <p id="authSub">留下邮箱，思想者会在此等你</p>
+    </div>
+    <form id="authForm" class="auth-form" autocomplete="on">
+      <input id="authEmail" type="email" placeholder="邮箱" autocomplete="email" required>
+      <input id="authPassword" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password" minlength="6" required>
+      <p id="authError" class="auth-error" style="display:none"></p>
+      <p id="authNote" class="auth-note" style="display:none"></p>
+      <button type="submit" id="authSubmit" class="auth-submit">进入</button>
+    </form>
+    <button type="button" id="authToggle" class="auth-toggle" style="display:none">— 还没有账号？注册</button>
+  </div>
+</div>
+
+<!-- ══ Scene: Select ══ -->
+<div class="scene" id="sceneSelect">
+  <div class="select-body">
+    <div class="select-heading">
+      <h2>今日导师</h2>
+      <p>选择与你同行的思想者</p>
+    </div>
+    <div class="phil-cards" id="philCards"></div>
+  </div>
+</div>
+
+<!-- ══ Scene: Signal ══ -->
+<div class="scene" id="sceneSignal">
+  <div class="dialogue-col daily-col">
+    <div class="daily-date" id="dailyDate"></div>
+    <div class="daily-image" id="dailyImage"></div>
+    <p class="daily-prompt">今天，这让你想起了什么？</p>
+    <textarea id="dailyInput" placeholder="任何浮现的——一个画面、一句话、一种感觉……" rows="1"></textarea>
+    <div class="write-footer">
+      <span class="write-hint">按住 ↓ 沉入</span>
+      <button class="submit-btn" id="dailySubmitBtn" aria-label="按住发送"><span class="submit-label">↓</span></button>
+    </div>
+  </div>
+  <!-- 旧 signal 元素保留为占位（hidden） -->
+  <p class="signal-label" id="signalLabel" style="display:none"></p>
+  <div class="signal-list" id="signalList" style="display:none"></div>
+</div>
+
+<!-- ══ Scene: Greeting ══ -->
+<div class="scene" id="sceneGreeting">
+  <div class="dialogue-col">
+    <div class="attr-row" id="greetAttr"></div>
+    <p class="greeting-text" id="greetText"></p>
+    <button class="start-btn" id="startBtn">开始回应 →</button>
+  </div>
+</div>
+
+<!-- ══ Scene: Writing ══ -->
+<div class="scene" id="sceneWriting">
+  <div class="dialogue-col">
+    <p class="prev-msg" id="prevMsg"></p>
+    <textarea id="userInput" placeholder="向他提问……关于你内心的任何事" rows="1"></textarea>
+    <div class="write-footer">
+      <div class="dict-indicator" id="dictIndicator">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <span class="dict-label">在听</span>
+      </div>
+      <span class="write-hint" id="writeHint">按住 ↓ 沉入</span>
+      <button class="submit-btn" id="submitBtn" aria-label="按住发送"><span class="submit-label">↓</span></button>
+    </div>
+    <p class="dissolve-hint" id="dissolveHint">他在思量……</p>
+  </div>
+</div>
+
+<!-- ══ Scene: Thinking ══ -->
+<div class="scene" id="sceneThinking">
+  <div class="dots"><i></i><i></i><i></i></div>
+</div>
+
+<!-- ══ Scene: Response ══ -->
+<div class="scene" id="sceneResponse">
+  <div class="dialogue-col">
+    <div class="attr-row" id="respAttr"></div>
+    <p class="resp-text" id="respText"></p>
+    <button class="resp-more-hint" id="respMoreHint">— 还有更多</button>
+    <button class="reply-btn" id="replyBtn">— 继续提问</button>
+  </div>
+</div>
+
+<!-- ══ History Overlay ══ -->
+<div id="histOverlay">
+  <div class="hist-inner">
+    <div class="hist-header" id="histHeader"></div>
+    <div id="histContent"></div>
+    <p id="histEmpty" style="font-family:'Playfair Display',serif;font-style:italic;font-size:16px;color:var(--ink-faint);text-align:center;display:none;opacity:0.5">尚无对话记录</p>
+    <p class="hist-close-hint">↑ 或 Esc 关闭</p>
+  </div>
+</div>
+
+<!-- ══ Supabase JS SDK ══ -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+  /* ══ Supabase 配置 ══
+     ⚠️ 填入你 Supabase 项目 → Settings → API 里的两个值
+     anon key 设计上就是公开的（受 Row Level Security 保护），可以提交到仓库 */
+  const SUPA_URL      = 'https://msvcnuvduivlzggncmej.supabase.co';
+  const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zdmNudXZkdWl2bHpnZ25jbWVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMzM2OTksImV4cCI6MjA5NDkwOTY5OX0.OmjejhLaXkbxjD84WBbg1SgSMdr6s1T76f5KrYe02p4';
+  window.supa = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   SVG PORTRAIT PATHS (inner content only, no <svg> tag)
+══════════════════════════════════════════════════════ */
+const SVG = {
+  freud: `
+    <rect x="1" y="1" width="146" height="184" fill="#F6F3EC" stroke="#1B1B18" stroke-width="2.5"/>
+    <rect x="6.5" y="6.5" width="135" height="173" fill="none" stroke="#1B1B18" stroke-width="0.6"/>
+    <rect x="7" y="7" width="134" height="172" fill="#1B1B18"/>
+    <g stroke="#272722" stroke-width="1.1">
+      <line x1="7" y1="38" x2="45" y2="7"/><line x1="7" y1="66" x2="73" y2="7"/>
+      <line x1="7" y1="94" x2="101" y2="7"/><line x1="7" y1="122" x2="129" y2="7"/>
+      <line x1="7" y1="150" x2="141" y2="26"/><line x1="20" y1="179" x2="141" y2="58"/>
+      <line x1="48" y1="179" x2="141" y2="88"/><line x1="76" y1="179" x2="141" y2="118"/>
+      <line x1="104" y1="179" x2="141" y2="148"/>
+    </g>
+    <path d="M7 179 L7 152 L38 136 L58 147 L74 154 L74 179Z" fill="#1B1B18"/>
+    <path d="M141 179 L141 152 L110 136 L90 147 L74 154 L74 179Z" fill="#1B1B18"/>
+    <polygon points="62,147 74,162 86,147 74,140" fill="#F6F3EC"/>
+    <line x1="74" y1="162" x2="74" y2="179" stroke="#F6F3EC" stroke-width="6"/>
+    <rect x="66" y="148" width="16" height="22" rx="6" fill="#EDE0C4"/>
+    <ellipse cx="74" cy="83" rx="52" ry="60" fill="#1B1B18"/>
+    <ellipse cx="74" cy="88" rx="38" ry="47" fill="#EDE0C4"/>
+    <line x1="57" y1="65" x2="91" y2="65" stroke="#C8B898" stroke-width="0.7" opacity="0.55"/>
+    <circle cx="61" cy="86" r="13" fill="none" stroke="#1B1B18" stroke-width="2.8"/>
+    <circle cx="87" cy="86" r="13" fill="none" stroke="#1B1B18" stroke-width="2.8"/>
+    <line x1="72" y1="86" x2="76" y2="86" stroke="#1B1B18" stroke-width="2"/>
+    <line x1="48" y1="83" x2="40" y2="80" stroke="#1B1B18" stroke-width="2.5"/>
+    <line x1="100" y1="83" x2="108" y2="80" stroke="#1B1B18" stroke-width="2.5"/>
+    <path d="M74 99 Q69 110 67 117 Q71 121 74 122 Q77 121 81 117 Q79 110 74 99" fill="#C8B080" opacity="0.45"/>
+    <path d="M60 119 Q66 128 74 125 Q82 128 88 119 Q82 115 74 116 Q66 115 60 119Z" fill="#1B1B18"/>
+    <path d="M42 128 Q36 152 39 172 Q53 184 74 186 Q95 184 109 172 Q112 152 106 128 Q91 134 74 135 Q57 134 42 128Z" fill="#1B1B18"/>
+    <g stroke="#272722" stroke-width="0.9" opacity="0.55">
+      <line x1="54" y1="135" x2="52" y2="174"/><line x1="63" y1="135" x2="62" y2="180"/>
+      <line x1="74" y1="135" x2="74" y2="183"/><line x1="85" y1="135" x2="86" y2="180"/>
+      <line x1="94" y1="135" x2="96" y2="174"/>
+    </g>
+    <ellipse cx="74" cy="172" rx="16" ry="6" fill="#272722" opacity="0.4"/>`,
+
+  weber: `
+    <rect x="1" y="1" width="146" height="184" fill="#F6F3EC" stroke="#1B1B18" stroke-width="2.5"/>
+    <rect x="6.5" y="6.5" width="135" height="173" fill="none" stroke="#1B1B18" stroke-width="0.6"/>
+    <rect x="7" y="7" width="134" height="172" fill="#1B1B18"/>
+    <g stroke="#272722" stroke-width="1.1">
+      <line x1="7" y1="38" x2="45" y2="7"/><line x1="7" y1="66" x2="73" y2="7"/>
+      <line x1="7" y1="94" x2="101" y2="7"/><line x1="7" y1="122" x2="129" y2="7"/>
+      <line x1="7" y1="150" x2="141" y2="26"/><line x1="20" y1="179" x2="141" y2="58"/>
+      <line x1="48" y1="179" x2="141" y2="88"/><line x1="76" y1="179" x2="141" y2="118"/>
+    </g>
+    <path d="M7 179 L7 145 L40 128 L62 140 L74 146 L74 179Z" fill="#1B1B18"/>
+    <path d="M141 179 L141 145 L108 128 L86 140 L74 146 L74 179Z" fill="#1B1B18"/>
+    <rect x="68" y="142" width="12" height="26" rx="4" fill="#EDE0C4"/>
+    <polygon points="62,142 74,146 68,158" fill="#F6F3EC"/>
+    <polygon points="86,142 74,146 80,158" fill="#F6F3EC"/>
+    <ellipse cx="74" cy="78" rx="50" ry="58" fill="#1B1B18"/>
+    <path d="M30 58 Q32 28 74 24 Q116 28 118 58 Q110 38 74 36 Q38 38 30 58Z" fill="#1B1B18"/>
+    <ellipse cx="74" cy="82" rx="36" ry="44" fill="#EDE0C4"/>
+    <path d="M46 108 Q44 128 50 142 Q62 150 74 150 Q86 150 98 142 Q104 128 102 108 Q90 114 74 115 Q58 114 46 108Z" fill="#7A6245" opacity="0.75"/>
+    <path d="M56 96 Q62 104 74 102 Q86 104 92 96 Q84 88 74 90 Q64 88 56 96Z" fill="#5C4A30"/>
+    <circle cx="60" cy="80" r="12" fill="none" stroke="#1B1B18" stroke-width="2"/>
+    <circle cx="88" cy="80" r="12" fill="none" stroke="#1B1B18" stroke-width="2"/>
+    <line x1="72" y1="80" x2="76" y2="80" stroke="#1B1B18" stroke-width="1.6"/>
+    <line x1="48" y1="79" x2="40" y2="75" stroke="#1B1B18" stroke-width="2"/>
+    <line x1="100" y1="79" x2="108" y2="75" stroke="#1B1B18" stroke-width="2"/>
+    <circle cx="60" cy="80" r="4" fill="#1B1B18"/>
+    <circle cx="88" cy="80" r="4" fill="#1B1B18"/>
+    <path d="M38 125 Q33 150 37 172 Q52 184 74 186 Q96 184 111 172 Q115 150 110 125 Q94 132 74 133 Q54 132 38 125Z" fill="#1B1B18"/>
+    <g stroke="#272722" stroke-width="0.9" opacity="0.5">
+      <line x1="56" y1="133" x2="54" y2="176"/><line x1="66" y1="133" x2="65" y2="181"/>
+      <line x1="74" y1="133" x2="74" y2="183"/><line x1="82" y1="133" x2="83" y2="181"/>
+      <line x1="92" y1="133" x2="94" y2="176"/>
+    </g>`,
+
+  marx: `
+    <rect x="1" y="1" width="146" height="184" fill="#F6F3EC" stroke="#1B1B18" stroke-width="2.5"/>
+    <rect x="6.5" y="6.5" width="135" height="173" fill="none" stroke="#1B1B18" stroke-width="0.6"/>
+    <rect x="7" y="7" width="134" height="172" fill="#1B1B18"/>
+    <g stroke="#272722" stroke-width="1.1">
+      <line x1="7" y1="38" x2="45" y2="7"/><line x1="7" y1="66" x2="73" y2="7"/>
+      <line x1="7" y1="94" x2="101" y2="7"/><line x1="7" y1="122" x2="129" y2="7"/>
+      <line x1="20" y1="179" x2="141" y2="58"/><line x1="48" y1="179" x2="141" y2="88"/>
+      <line x1="76" y1="179" x2="141" y2="118"/>
+    </g>
+    <path d="M7 179 L7 138 L30 122 L56 136 L74 142 L74 179Z" fill="#1B1B18"/>
+    <path d="M141 179 L141 138 L118 122 L92 136 L74 142 L74 179Z" fill="#1B1B18"/>
+    <rect x="69" y="140" width="10" height="24" rx="3" fill="#EDE0C4"/>
+    <path d="M20 58 Q18 20 74 14 Q130 20 128 58 Q122 24 74 20 Q26 24 20 58Z" fill="#1B1B18"/>
+    <path d="M18 58 Q14 36 30 44 Q20 50 22 66 Q16 62 18 58Z" fill="#1B1B18"/>
+    <path d="M130 58 Q134 36 118 44 Q128 50 126 66 Q132 62 130 58Z" fill="#1B1B18"/>
+    <ellipse cx="74" cy="76" rx="54" ry="62" fill="#1B1B18"/>
+    <ellipse cx="74" cy="80" rx="34" ry="40" fill="#EDE0C4"/>
+    <path d="M38 108 Q28 130 30 155 Q28 140 36 128 Q44 152 74 158 Q104 152 112 128 Q120 140 118 155 Q120 130 110 108 Q96 116 74 118 Q52 116 38 108Z" fill="#2C2520"/>
+    <path d="M30 155 Q28 172 36 180 Q55 188 74 186 Q93 188 112 180 Q120 172 118 155 Q100 166 74 168 Q48 166 30 155Z" fill="#2C2520"/>
+    <path d="M58 90 Q62 98 74 96 Q86 98 90 90 Q84 82 74 84 Q64 82 58 90Z" fill="#4A3828"/>
+    <ellipse cx="62" cy="78" r="7" fill="#1B1B18"/>
+    <ellipse cx="86" cy="78" r="7" fill="#1B1B18"/>
+    <ellipse cx="62" cy="78" r="3" fill="#EDE0C4"/>
+    <ellipse cx="86" cy="78" r="3" fill="#EDE0C4"/>
+    <path d="M50 66 Q62 60 74 62 Q86 60 98 66" fill="none" stroke="#1B1B18" stroke-width="3.5"/>
+    <path d="M40 66 Q34 62 38 72" fill="none" stroke="#1B1B18" stroke-width="2.5"/>
+    <path d="M108 66 Q114 62 110 72" fill="none" stroke="#1B1B18" stroke-width="2.5"/>`
+};
+
+/* ══════════════════════════════════════════════════════
+   DAILY OPENING — 抽象木刻构图占位池
+   ──────────────────────────────────────────────
+   每张都是纯 ink-on-cream 的极简抽象。刻意避免具象暗示，
+   让用户在自己的当下投射意义，而不是被图形带跑。
+   v1: 7 张静态 SVG，按日期 mod 选定。日后可换为生成式 API。
+══════════════════════════════════════════════════════ */
+const DAILY_IMAGES = [
+  // 0 — 一道光：几乎压满的墨，一道窄窄的、不规则的留白裂开
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="40" width="360" height="400" fill="#1B1B18"/>
+    <path fill="#F6F3EC" d="M 256 52 L 268 48 L 271 180 L 266 280 L 269 372 L 263 432 L 258 376 L 262 200 Z"/>
+  </svg>`,
+
+  // 1 — 沉：底部一团重墨，上方悬一颗小点
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#1B1B18" d="M 0 282 Q 80 268 168 274 Q 256 282 360 268 L 360 480 L 0 480 Z"/>
+    <circle cx="178" cy="118" r="20" fill="#1B1B18"/>
+  </svg>`,
+
+  // 2 — 三柱：三道不齐的竖墨，微微歪斜
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <rect x="64" y="78" width="28" height="320" fill="#1B1B18" transform="rotate(-2 78 238)"/>
+    <rect x="158" y="120" width="40" height="278" fill="#1B1B18" transform="rotate(1 178 259)"/>
+    <rect x="246" y="58" width="26" height="378" fill="#1B1B18" transform="rotate(-1 259 247)"/>
+  </svg>`,
+
+  // 3 — 回：一道弯回自身的粗笔，留口在左
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="none" stroke="#1B1B18" stroke-width="24" stroke-linecap="round"
+          d="M 96 96 Q 282 122 268 244 Q 254 374 138 384 Q 102 386 78 380"/>
+  </svg>`,
+
+  // 4 — 门：偏左的厚墨方框，内里空着
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#1B1B18" fill-rule="evenodd"
+          d="M 78 84 L 274 84 L 274 410 L 78 410 Z
+             M 100 124 L 252 124 L 252 388 L 100 388 Z"/>
+  </svg>`,
+
+  // 5 — 石堆：五块大小不一的墨石叠起来
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="180" cy="380" rx="124" ry="22" fill="#1B1B18"/>
+    <ellipse cx="180" cy="318" rx="92"  ry="32" fill="#1B1B18"/>
+    <ellipse cx="180" cy="248" rx="62"  ry="28" fill="#1B1B18"/>
+    <ellipse cx="180" cy="192" rx="38"  ry="24" fill="#1B1B18"/>
+    <ellipse cx="180" cy="148" rx="20"  ry="18" fill="#1B1B18"/>
+  </svg>`,
+
+  // 6 — 一笔：单刀斜过，粗、肯定、不收
+  `<svg viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#1B1B18"
+          d="M 56 384 Q 78 384 96 360 L 278 100 Q 296 78 308 96 Q 316 110 296 128 L 114 388 Q 96 408 76 400 Q 56 392 56 384 Z"/>
+  </svg>`,
+];
+
+/** 取今天的图：日期序号 mod 池大小 —— 同一天内任何场景拿到同一张。 */
+function getTodayImage() {
+  const now = new Date();
+  const dayOfYear = Math.floor(
+    (now - new Date(now.getFullYear(), 0, 0)) / 86400000
+  );
+  return {
+    svg: DAILY_IMAGES[dayOfYear % DAILY_IMAGES.length],
+    dateLabel: now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
+  };
+}
+
+/* ══════════════════════════════════════════════════════
+   PHILOSOPHER DATA
+══════════════════════════════════════════════════════ */
+const P = {
+  freud: {
+    name: '西格蒙德·弗洛伊德', short: '弗洛伊德',
+    signals: ['焦虑', '渴望', '压抑', '身份认同'],
+    tagline: '潜意识的解读者',
+    years: '1856 — 1939',
+    greetings: {
+      '焦虑': '焦虑从不凭空而来。\n\n它总是某种被压抑之物的回声——某个无法直言的愿望，以担忧的形式重新浮现。今天，是什么让你感到不安？不必整理，就说出来。',
+      '渴望': '你内心有某种渴望在涌动。\n\n但有意识的心灵以为自己想要的，很少是最初的对象。今天，告诉我你渴望的究竟是什么——还是说，你还不确定那是什么？',
+      '压抑': '有些东西，你一直没有说出口。\n\n也许它太危险，太令人不安，太不符合你对自己的认知。也许今天，可以试着说一说。',
+      '身份认同': '你所相信的那个自我，并非原初的。\n\n它是一个建构物——认同、防御与妥协叠加的结果。那个说话的「我」，你确定你认识它吗？',
+      default: '你今天带着什么来到这里？\n\n不必整理，也不必知道如何开口。精神生活中没有什么是偶然的——你以这种方式来提问，这件事本身就有意义。'
+    },
+    R: {
+      anxiety: `你所称之为焦虑的，很少是它表面呈现的样子。每一种有意识的恐惧之下，都隐藏着更深的暗流——那个无法直言的被压抑的愿望。自我，这个永远被本我的驱力与超我的谴责夹在中间的忠实仆人，将这种不安制造出来，作为一种警告信号。\n\n我想请你认真思考这个问题：你究竟害怕失去的是什么？因为在那个答案里，藏着你欲望的真实结构。`,
+      love: `你将这种依恋称为爱，也许确实如此。但我们所称的爱，很少是一种简单的形成物——它是复合的，一部分是温情，一部分是投射，一部分是早年纽带留下的未竟残余。\n\n在爱人眼中，被爱者永远不完全是他们自己。他们同时也是另一个人——某个来自童年的人，某个曾经对我们拥有巨大权力的人。这个人让你想起了谁？`,
+      work: `你所描述的雄心，并非仅仅是对成就的驱动。它是更深层能量的升华——力比多向社会认可目标的转移。当一个人以异常的强度投入工作时，他往往是在逃离某物，与其说是在追求某物。\n\n值得审视的问题不是你想要建造什么，而是你想通过建造来逃离什么。这两个答案很少是相同的。`,
+      sadness: `悲伤与忧郁，虽然面貌相似，却不是同一种苦难。在悲伤中，是世界变得贫乏。在忧郁中，是自我本身变得贫乏——那无法找到外部对象的攻击性，转而指向自身。\n\n你并非仅仅是悲伤——在某种更深的层面上，你也许是在愤怒，愤怒于某个你无法允许自己愤怒的人。这悲伤，真正指向的是谁？`,
+      dream: `梦并非沉睡大脑的混乱残余。它是通往无意识的王道——被压抑的材料以伪装的形式在此表达自身。每一个梦都是愿望的达成——那些象征并非随意的，它们是无意识在用它本来的语言说话。\n\n把梦的细节告诉我，让我们像阅读一部外语文本一样，共同解读它。`,
+      family: `你描述的这段关系并非仅仅是传记性的。早年的纽带形成了一个模板，我们所有后续的依附关系，都在这个模板上无意识地建构起来。\n\n家庭罗曼史从未真正完结。问题不是他们是否塑造了你，而是你是否仍在演绎一个已遗忘了其作者是谁的剧本。`,
+      anger: `愤怒，几乎始终是一种次级情绪——某种更古老、更痛苦的东西的表面喷发：通常是悲伤，通常是屈辱，通常是曾被拒绝或背叛的爱。\n\n暴怒的人，在更深的层面上，通常是哀悼的人。这愤怒之前发生了什么？它真正指向的是谁？`,
+      desire: `你所称的欲望是本我的信使——本能生命寻求释放的向上压力。但那个原始的愿望，已通过移置机制转移到某个更被允许的东西之上。\n\n要问的问题不是你是否应该渴望，而是：当你伸手去拿这个特定的东西时，你究竟真正在伸手去拿什么？`,
+      identity: `你所相信的那个自我，并非原初的。它是一个建构物——历经数十年，从认同、内摄，以及抵御早期焦虑而竖立的防御的残余中建构而来。\n\n这不是绝望的理由，这是探究的理由。问题不是你是谁，而是你曾经需要成为什么，以及你在那个成为的过程中牺牲了什么。`,
+      default: `你提出的这个问题，触及的，我猜测，远不止你直接说出的那些。几乎总是这样——有意识的心灵呈现症状，无意识持有病因。\n\n我好奇，是什么让你今天而非另一天，提出了这个问题？那个答案，往往比问题本身更有意思。`
+    }
+  },
+
+  weber: {
+    name: '马克斯·韦伯', short: '韦伯',
+    signals: ['空虚', '身份认同', '倦怠'],
+    tagline: '意义与理性的追问者',
+    years: '1864 — 1920',
+    greetings: {
+      '空虚': '你所感受到的空洞，在我看来，不是个人的失败。\n\n它是现代世界的结构性处境——我把它称为「祛魅」。世界失去了神圣的意义框架，而理性虽然无比高效，却回答不了「为什么」。你今天，为什么而来？',
+      '身份认同': '在传统社会，你是什么，取决于你生在哪里。在现代社会，你是什么，变成了一个需要你自己回答的问题。\n\n这是一种解放，也是一种重负。你现在，是在为某种真正相信的东西而活，还是仅仅在维持某种生活方式？',
+      '倦怠': '你描述的这种疲惫，让我想到铁笼的意象。\n\n理性化的社会要求我们高效、可预测、可量化——它忘了问我们，这一切究竟为了什么。今天，告诉我你在什么地方感到了束缚。',
+      default: '你今天带着什么来到这里？\n\n我有一个习惯：我总是先问，在这个问题背后，隐藏着一个怎样的价值判断。因为所有的问题，都不是价值中立的。'
+    },
+    R: {
+      work: `你将这种投入称为热爱，也许是这样。但我想引入一个区分：职业（Beruf），在德语里同时意味着「工作」和「召唤」。这不是巧合。\n\n问题不是你是否足够努力，而是：这份工作对你而言，究竟是一种内在的使命感，还是仅仅是理性铁笼中的另一条轨道？理性化的社会要求我们高效，却不承诺我们意义。那意义，必须由你自己去找寻。`,
+      meaning: `你所感受到的空洞，有其历史原因。我把这个过程称为「祛魅」——现代世界系统性地清除了曾经赋予生活意义的神圣框架：宗教、传统、共同体。\n\n科学与理性接管了一切，但它们只能回答「如何」，回答不了「为什么」。现代人必须独自建构意义——而这种建构，没有任何保证。面对这种处境，你打算如何回应？`,
+      identity: `身份的问题，在现代性中格外尖锐。我区分了两种人生取向：为某种使命而活，与依靠某种角色而活。这两者从外部看可能完全相同，但内部的感受截然不同。\n\n为使命而活的人，即便在铁笼之内，仍然保有某种内在的自由——因为他知道自己为什么在这里。你，是哪一种？`,
+      control: `你描述的这种感受——一切都被规则、程序、效率指标所支配——我把这称为「形式理性」对「实质理性」的胜利。机器转动，目标实现，但没有人记得我们最初为什么要建造这台机器。\n\n即便在铁笼之内，仍然存在一种可能性：带着清醒的双眼，既参与其中，又不被其吞噬。这种清醒本身，就是一种抵抗。`,
+      fatigue: `疲惫，如果出现得足够规律，往往是一个信号：你正在用力做一件你不确定为什么要做的事。\n\n效率可以无限提高，而意义不能。在你所有的努力之中，有多少是出于真正的内在驱动，又有多少仅仅是在回应外部的期待和压力？`,
+      empty: `你所描述的空洞，是现代性的症状，不是你的缺陷。过去的人有宗教、传统、无需质疑的共同体——这些东西给予生活一种不言而喻的框架。现代人失去了这个框架，却独自面对「为什么活着」这个问题。\n\n这不是悲剧，但它要求一种特别的勇气：在没有保证的情况下，为自己的生活建立意义。`,
+      default: `你提出的这个问题，让我想到理性化与意义之间永恒的张力。现代人有太多工具，却越来越难以回答那个最简单的问题：这一切，为了什么？\n\n我没有现成的答案——我从不提供现成的答案。我能做的，是帮你把问题想得更清楚。因为清晰本身，有时就是一种慰藉。`
+    }
+  },
+
+  marx: {
+    name: '卡尔·马克思', short: '马克思',
+    signals: ['疲惫', '愤怒', '失控感'],
+    tagline: '异化与解放的思考者',
+    years: '1818 — 1883',
+    greetings: {
+      '疲惫': '你的疲惫不仅仅是身体的信号。\n\n当劳动者感到被消耗而非被成全，当时间被出售而不是被创造——这种耗竭，是有其结构性原因的。今天，告诉我你在为什么而疲惫。',
+      '愤怒': '你的愤怒是有来由的。\n\n我从不劝人「接受现实」——那往往只是在要求人安于不公正。愤怒，如果指向了正确的方向，是一种认识工具。今天，是什么触发了你？',
+      '失控感': '失控感，有时候是一种清醒。\n\n当你感到生活不在自己手中，也许是因为它确实不在——不是因为你的软弱，而是因为某些力量本就不在你的掌控范围之内。今天，什么让你感到无力？',
+      default: '你今天带着什么来到这里？\n\n告诉我你的处境——不是你的感受，而是你的处境。从具体的事实开始，这是理解一切的起点。'
+    },
+    R: {
+      work: `你描述的这种对工作的疲惫，不仅仅是个人的倦怠问题。这是一种结构性的疏离——我把它称为「异化劳动」。\n\n当劳动者不再拥有劳动的产品，当工作的过程本身变成一种痛苦而非自我实现——这时候，疲惫不是你的弱点，它是一种症状。问题不是你为什么累，而是：什么样的劳动，才能让人感到自己是在创造，而不是在被消耗？`,
+      alienation: `你所描述的这种感觉——仿佛自己的生活是在为某种外部目的服务——正是异化的本质。\n\n人类的本质是一种自由自觉的创造性活动。但在当前的条件下，这种创造性被工具化了，被量化了，被出售了。你感受到的距离感，不是幻觉——它是真实的，它有其物质原因。`,
+      anger: `你的愤怒是有来由的。我不会告诉你「控制情绪」——这类劝告，往往只是在要求人接受不公正的现实。\n\n愤怒，如果指向了正确的方向，是一种认识论工具——它告诉你哪里存在矛盾，哪里存在压迫，哪里存在需要被质疑的权力关系。这种能量，能否被转化为一种清醒的、有方向的行动？`,
+      fatigue: `疲惫是劳动条件留在身体上的印记。当一个人感到彻底的耗竭时，我首先不会问「你做了什么」，而是问：在你的劳动中，有多少是真正属于你的？\n\n你的时间、你的精力、你的创造力——它们流向了哪里？由谁获得了它们创造的价值？休息是必要的，但更重要的，是理解为什么我们需要这么多休息。`,
+      society: `你描述的那个压力，不仅仅来自个人选择的失误，也来自你所处的社会位置和物质条件。意识形态让我们相信，个体的处境完全是个体努力的结果——但这遮蔽了一个真相：人们生于不同的起点，这些起点并非中性的。\n\n在理解自己的处境时，把眼光放宽一点，看看那些塑造了你所有选择的外部条件。`,
+      identity: `你问「我是谁」。这是一个重要的问题。但我想补充一个维度：你的自我感受，你的价值观，你认为什么是值得追求的——这些不是从天而降的。它们形成于特定的物质和社会条件之中，被特定的意识形态所塑造。\n\n认识自己，不能只向内看，还需要向外看——看清楚是什么样的历史和社会力量，塑造了那个向内看时所看到的「我」。`,
+      control: `失控感，有时候是一种清醒。当你感到生活不在自己手中，也许是因为它确实不在——不是因为你的软弱，而是因为某些力量本就属于结构性的范畴。\n\n理解这一点，不是放弃，而是把问题从「我为什么失败」转移到「是什么条件让这件事如此困难」。这个转移，往往带来意想不到的清晰。`,
+      default: `你的问题触及的，是个人体验与社会条件之间那条复杂的边界线。我一直相信：理解一个人，必须理解他所处的物质和历史处境。\n\n个体的苦恼，往往是更大矛盾在具体个人身上的投射。所以，让我们从你的具体处境开始——多告诉我一些。`
+    }
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   DEEPSEEK API
+══════════════════════════════════════════════════════ */
+const DS = {
+  // 同源 Vercel Serverless 代理：用服务端 DEEPSEEK_API_KEY，校验 Supabase 登录
+  // 本地若想脱机调（用 proxy.py），把下行改成 'http://localhost:3458'
+  endpoint: '/api/deepseek',
+  model: 'deepseek-v4-flash',
+  get key() { return localStorage.getItem('ds_key') || ''; },
+  set key(v) { localStorage.setItem('ds_key', v); }
+};
+
+function buildSystemPrompt(philKey) {
+  const now = new Date();
+  const timeCtx = `现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，` +
+    `${['深夜','清晨','清晨','清晨','清晨','清晨','清晨','早上','早上','上午','上午','上午',
+       '中午','下午','下午','下午','下午','傍晚','傍晚','晚上','晚上','晚上','夜里','深夜'][now.getHours()]}。`;
+
+  const shared = `\n\n时间感知：${timeCtx}你对此刻有感知——不必直接报时，但可以在合适时让"今天""此刻""这个时节"自然地渗入你的话语，让来访者感受到这次对话发生在真实的当下。`;
+
+  const prompts = {
+    freud: `你是西格蒙德·弗洛伊德（Sigmund Freud，1856–1939），精神分析学的创始人。你正在与一位用中文交谈的来访者进行私人会谈。
+
+回应要求：
+- 全程用中文，语言精炼、深邃、带有分析师的克制
+- 从精神分析视角解读（潜意识、欲望、防御机制、移情、早期经历）
+- 不急于给答案，而是揭示表面之下的隐藏动力
+- 每次回应 120–200 字，分 1–2 段
+- 以一个深入的反问或观察结尾，引导更深的自我探索
+- 语气：沉静、洞察、略带距离感，不表演，就是你自己
+
+你不是在扮演弗洛伊德，你就是弗洛伊德，这是一次真实的会谈。`,
+
+    weber: `你是马克斯·韦伯（Max Weber，1864–1920），社会学家与政治经济学家。你正在与一位用中文交谈的人进行思想对话。
+
+回应要求：
+- 全程用中文，语言严谨、清醒、带有历史感的厚重
+- 将个体处境置于更大的社会与历史结构中分析（理性化、祛魅、Beruf、铁笼、意义危机）
+- 不提供廉价安慰，帮助对方看清处境的本质
+- 每次回应 120–200 字，分 1–2 段
+- 以一个让对方审视自身价值取向的问题结尾
+- 语气：学术而悲悯，带着一种清醒的忧郁
+
+你不是在扮演韦伯，你就是韦伯，这是一次真实的思想对话。`,
+
+    marx: `你是卡尔·马克思（Karl Marx，1818–1883），哲学家、经济学家、革命理论家。你正在与一位用中文交谈的人进行对话。
+
+回应要求：
+- 全程用中文，语言有力、深刻、带有批判的锋芒
+- 将个人苦痛与更广泛的社会矛盾联系（异化、劳动、物质条件、阶级意识、意识形态）
+- 批判指向结构，而非个人
+- 每次回应 120–200 字，分 1–2 段
+- 以一个让对方重新审视自身物质处境的问题结尾
+- 语气：充满激情但保持分析清醒，既有同情又有洞察
+
+你不是在扮演马克思，你就是马克思，这是一次真实的对话。`
+  };
+
+  return prompts[philKey] + shared;
+}
+
+// 对话历史持久化（按导师存储，最多保留 30 条消息 = 15 轮对话）
+const HISTORY_LIMIT = 30;
+
+function loadHistory(philKey) {
+  try {
+    return JSON.parse(localStorage.getItem(`conv_${philKey}`) || '[]');
+  } catch { return []; }
+}
+
+function saveHistory(philKey, history) {
+  const trimmed = history.slice(-HISTORY_LIMIT);
+  localStorage.setItem(`conv_${philKey}`, JSON.stringify(trimmed));
+}
+
+function clearHistory(philKey) {
+  localStorage.removeItem(`conv_${philKey}`);
+}
+
+async function callDeepSeek(userMsg, philKey) {
+  // 拿 Supabase 当前用户的 access_token，由 /api/deepseek 校验后再转发到上游
+  const { data: { session } } = await supa.auth.getSession();
+  if (!session) throw new Error('NOT_SIGNED_IN');
+
+  const messages = [
+    { role: 'system', content: buildSystemPrompt(philKey) },
+    ...convHistory,
+    { role: 'user', content: userMsg }
+  ];
+  const res = await fetch(DS.endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ model: DS.model, messages, max_tokens: 400, temperature: 0.85 })
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const data = await res.json();
+  const reply = data.choices[0].message.content.trim();
+  convHistory.push({ role: 'user', content: userMsg }, { role: 'assistant', content: reply });
+  saveHistory(philKey, convHistory);
+  return reply;
+}
+
+/* ══════════════════════════════════════════════════════
+   STATE & SCENE MANAGEMENT
+══════════════════════════════════════════════════════ */
+let curPhil = null;
+let curScene = null;        // 由 bootstrapAuth() 在 DOMContentLoaded 后决定
+let sessionCount = 0;
+let lastRespText = '';
+let convHistory = [];
+let respChunks = [];
+let respChunkIdx = 0;
+
+const scenes = {};
+['sceneAuth','sceneSelect','sceneSignal','sceneGreeting','sceneWriting','sceneThinking','sceneResponse']
+  .forEach(id => { scenes[id] = document.getElementById(id); });
+
+// Init: hide all scenes — bootstrapAuth() 之后再决定首屏
+Object.values(scenes).forEach(s => { s.style.display = 'none'; s.style.opacity = '0'; });
+
+function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+function css(n, p) { Object.assign(n.style, p); }
+
+async function go(nextId, dur = 500) {
+  const inn = scenes[nextId];
+  const out = curScene ? scenes[curScene] : null;
+  if (out) {
+    out.style.pointerEvents = 'none';
+    css(out, { transition: `opacity ${dur}ms ease`, opacity: '0' });
+  }
+  inn.style.display = 'flex';
+  css(inn, { transition: 'none', opacity: '0' });
+  await pause(out ? dur + 20 : 20);
+  if (out) out.style.display = 'none';
+  inn.style.pointerEvents = 'auto';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    css(inn, { transition: `opacity ${dur}ms ease`, opacity: '1' });
+  }));
+  curScene = nextId;
+}
+
+function svgThumb(philKey) {
+  return `<svg viewBox="0 0 148 186" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:30px;flex-shrink:0">${SVG[philKey]}</svg>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   BUILD SELECTION CARDS
+══════════════════════════════════════════════════════ */
+const philCards = document.getElementById('philCards');
+['freud','weber','marx'].forEach(key => {
+  const d = P[key];
+  const card = document.createElement('div');
+  card.className = 'phil-card';
+  card.dataset.phil = key;
+  card.innerHTML = `
+    <svg viewBox="0 0 148 186" xmlns="http://www.w3.org/2000/svg" style="width:80px;height:100px;margin-bottom:16px">${SVG[key]}</svg>
+    <div class="phil-name">${d.short}</div>
+    <div class="phil-years">${d.years}</div>
+    <div class="phil-rule"></div>
+    <div class="phil-tagline">${d.tagline}</div>
+  `;
+  card.addEventListener('click', () => startSession(key));
+  philCards.appendChild(card);
+});
+
+/* ══════════════════════════════════════════════════════
+   START SESSION
+══════════════════════════════════════════════════════ */
+async function startSession(philKey) {
+  curPhil = philKey;
+  sessionCount = 0;
+  convHistory = loadHistory(philKey); // 加载历史记忆
+  const hasMem = convHistory.length > 0;
+  document.getElementById('clearMemBtn').style.display = hasMem ? 'block' : 'none';
+  const d = P[philKey];
+
+  // —— 准备每日开场画面（图按日期 mod 选定；同一天内任何会话都看到同一张）
+  const today = getTodayImage();
+  dailyImage.innerHTML = today.svg;
+  dailyDate.textContent = today.dateLabel;
+  // 清空上一次留下的输入（起点的纯净）
+  dailyInput.value = '';
+  dailyInput.style.height = 'auto';
+  dailySubmitBtn.disabled = true;
+
+  document.getElementById('backBtn').style.display = 'block';
+  await go('sceneSignal', 600);
+
+  // —— 给图与提示一段静态时间，让它先到达用户（CSS 里已排好渐入节奏：
+  //     0.3s 图 / 1.0s 问句 / 1.6s 输入框 / 1.9s 提示与按钮）
+  //     超过 2.4s 后焦点轻轻落到输入框，不催不急
+  setTimeout(() => { if (curScene === 'sceneSignal') dailyInput.focus(); }, 2400);
+
+  // —— 等用户写下今日联想并长按沉入。期间没有任何自动推进。
+  const association = await waitForDailySubmit();
+  if (association === null) return;   // 用户在 daily 场景按了返回，本次 session 结束
+  // association 已存进 lastDailyAssociation，可在后续 LLM 调用里复用
+
+  // —— 接下来仍然走原有的"哲学家迎接"——以便保留产品本来的诗意
+  //     （后续可考虑让哲学家在 greeting 里呼应用户写下的联想）
+  const sig = (d.signals[Math.floor(Math.random() * d.signals.length)]);
+  const greet = d.greetings[sig] || d.greetings.default;
+  lastRespText = greet;
+
+  document.getElementById('greetText').textContent = greet;
+  document.getElementById('greetAttr').innerHTML =
+    `${svgThumb(philKey)}<span class="attr-name">${d.short}</span>`;
+
+  await go('sceneGreeting', 580);
+  await pause(1000);
+  document.getElementById('startBtn').style.opacity = '1';
+}
+
+/* ══════════════════════════════════════════════════════
+   BACK TO SELECT
+══════════════════════════════════════════════════════ */
+document.getElementById('backBtn').addEventListener('click', async () => {
+  document.getElementById('startBtn').style.opacity = '0';
+  document.getElementById('backBtn').style.display = 'none';
+  // 若用户在每日开场里按返回，需把挂起的 Promise 解除，让上一次 startSession 优雅退出
+  if (_dailyResolve) {
+    const r = _dailyResolve;
+    _dailyResolve = null;
+    r(null);
+  }
+  await go('sceneSelect', 500);
+});
+
+/* ══════════════════════════════════════════════════════
+   DIALOGUE FLOW
+══════════════════════════════════════════════════════ */
+document.getElementById('startBtn').addEventListener('click', async () => {
+  css(document.getElementById('startBtn'), { transition: 'opacity 0.3s', opacity: '0' });
+  setupWriting();
+  await go('sceneWriting', 540);
+  document.getElementById('userInput').focus();
+});
+
+// 从哲学家最后一段话里提取收尾疑问句，作为输入框提示
+function extractInvitation(text) {
+  if (!text) return null;
+  // 按句末标点切开
+  const sentences = text.split(/(?<=[。！？…])\s*/).map(s => s.trim()).filter(Boolean);
+  // 从后往前找第一个含问号的句子
+  for (let i = sentences.length - 1; i >= 0; i--) {
+    const s = sentences[i];
+    if (s.includes('？')) {
+      // 去掉句首可能的破折号/空白，截短超长句
+      const clean = s.replace(/^[—–\s]+/, '').trim();
+      return clean.length > 46 ? clean.slice(0, 44) + '……' : clean;
+    }
+  }
+  return null;
+}
+
+// 各哲学家的专属托底邀请语（提取不到疑问句时使用）
+const philPlaceholder = {
+  freud: '说出来——无论什么，先不要整理……',
+  weber: '你真正相信的是什么……',
+  marx:  '告诉我你具体的处境……'
+};
+
+function setupWriting() {
+  /* 输入框契约：
+     1. 哲学家的话 → 显示在 prev-msg（输入框"上方"，小、faded、清晰分隔）
+     2. 输入框本身 → 永远空白，placeholder 只是中性短提示，不复制对方任何原话
+     这两条共同守护"起点的纯净"——用户写下的第一笔必须是自己的。 */
+  const prev = document.getElementById('prevMsg');
+  const question = extractInvitation(lastRespText);   // 优先取上一句的问号句
+  if (question) {
+    prev.textContent = question;
+    prev.style.display = '';
+  } else if (lastRespText) {
+    // 没找到问号时退回完整回应的前几行
+    const t = lastRespText.replace(/\n/g, ' ').slice(0, 110);
+    prev.textContent = t + (lastRespText.length > 110 ? '…' : '');
+    prev.style.display = '';
+  } else {
+    prev.style.display = 'none';
+  }
+  // placeholder 永远是中性短提示，绝不回收哲学家的原话
+  document.getElementById('userInput').placeholder = '回应……';
+}
+
+const input     = document.getElementById('userInput');
+const submitBtn = document.getElementById('submitBtn');
+const replyBtn  = document.getElementById('replyBtn');
+const respEl    = document.getElementById('respText');
+const moreHint  = document.getElementById('respMoreHint');
+
+// 将回复切分为段落 chunks；过长的段落再按句号断开
+function splitResponse(text) {
+  const paras = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  const chunks = [];
+  for (const para of paras) {
+    if (para.length <= 170) {
+      chunks.push(para);
+    } else {
+      // 按句末标点切分长段落
+      const parts = para.split(/(?<=[。！？…])\s*/);
+      let cur = '';
+      for (const p of parts) {
+        if (cur && (cur + p).length > 170) {
+          chunks.push(cur.trim());
+          cur = p;
+        } else {
+          cur += p;
+        }
+      }
+      if (cur.trim()) chunks.push(cur.trim());
+    }
+  }
+  return chunks.length ? chunks : [text];
+}
+
+// 展示下一个 chunk（带淡入淡出）
+async function advanceRespChunk() {
+  respChunkIdx++;
+  const hasMore = respChunkIdx < respChunks.length - 1;
+
+  // 淡出当前文字 + hint
+  css(respEl,    { transition: 'opacity 0.45s ease, filter 0.45s ease', opacity: '0', filter: 'blur(5px)' });
+  css(moreHint,  { transition: 'opacity 0.25s ease', opacity: '0' });
+  await pause(480);
+
+  respEl.textContent = respChunks[respChunkIdx];
+
+  // 淡入新文字
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    css(respEl, {
+      transition: 'opacity 1.5s cubic-bezier(0,0,0.25,1), filter 1.5s cubic-bezier(0,0,0.25,1)',
+      opacity: '1', filter: 'blur(0px)'
+    });
+  }));
+
+  await pause(1800);
+
+  if (hasMore) {
+    css(moreHint, { transition: 'opacity 0.8s ease', opacity: '1' });
+  } else {
+    css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
+  }
+}
+
+moreHint.addEventListener('click', () => {
+  if (respChunkIdx < respChunks.length - 1) advanceRespChunk();
+});
+
+async function submitFlow() {
+  const q = input.value.trim();
+  if (!q) return;
+  submitBtn.disabled = true;
+  sessionCount++;
+
+  // Dissolve input + 显示停顿提示
+  const hint = document.getElementById('dissolveHint');
+  css(input, {
+    transition: 'opacity 1.3s cubic-bezier(0.4,0,1,1), filter 1.3s cubic-bezier(0.4,0,1,1)',
+    opacity: '0', filter: 'blur(9px)'
+  });
+  await pause(500);
+  hint.style.opacity = '1';
+  await pause(900);
+  hint.style.opacity = '0';
+  css(input, { transition: 'none', opacity: '1', filter: 'blur(0px)' });
+  input.value = ''; input.style.height = 'auto';
+
+  // Thinking scene
+  const d = P[curPhil];
+  await go('sceneThinking', 400);
+
+  // 调用 DeepSeek API（thinking 场景自然等待 LLM 响应）
+  let text;
+  try {
+    text = await callDeepSeek(q, curPhil);
+  } catch (err) {
+    if (err.message === 'NO_KEY') {
+      text = '请先在页面顶部设置你的 DeepSeek API Key。';
+    } else {
+      text = `连接失败（${err.message}）。请检查网络或 API Key 是否有效。`;
+    }
+  }
+  lastRespText = text;
+
+  document.getElementById('respAttr').innerHTML = `
+    ${svgThumb(curPhil)}
+    <span class="attr-name">${d.name}</span>
+    <span class="attr-count">第 ${sessionCount} 轮</span>
+  `;
+
+  // 切分 chunks，展示第一段
+  respChunks    = splitResponse(text);
+  respChunkIdx  = 0;
+  const hasMore = respChunks.length > 1;
+
+  respEl.textContent   = respChunks[0];
+  replyBtn.style.opacity = '0';
+  moreHint.style.opacity = '0';
+  css(respEl, { opacity: '0', filter: 'blur(5px)', transition: 'none' });
+
+  await go('sceneResponse', 320);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    css(respEl, {
+      transition: 'opacity 1.7s cubic-bezier(0,0,0.25,1), filter 1.7s cubic-bezier(0,0,0.25,1)',
+      opacity: '1', filter: 'blur(0px)'
+    });
+  }));
+
+  await pause(2200);
+
+  if (hasMore) {
+    css(moreHint, { transition: 'opacity 0.9s ease', opacity: '1' });
+  } else {
+    css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
+  }
+  // 下一轮回到写作场景时输入框已被清空——按钮应保持禁用，
+  // 直到用户重新输入内容
+  submitBtn.disabled = !input.value.trim();
+}
+
+replyBtn.addEventListener('click', async () => {
+  css(replyBtn, { transition: 'opacity 0.25s ease', opacity: '0' });
+  setupWriting();
+  await go('sceneWriting', 560);
+  input.focus();
+});
+
+/* ── 长按发送（可复用工厂）─────────────────────────────────
+   交互契约：
+   1. 输入框默认空，永不预填——起点的纯净。
+   2. 发送 = 按住按钮 1.5 秒，墨水从底部慢慢沉满，↓ 变浅入墨。
+   3. 键盘 ↓ 键 = 等价手势（光标在文本末尾时生效）。
+   4. 中途松手 = 取消，墨水缓慢回落（420ms），给反悔留出物理空间。
+   5. 不再提供 ⌘+回车 等"瞬时快捷键"——终点的庄重。
+─────────────────────────────────────────────────────────── */
+const PRESS_DURATION_MS = 1500;
+
+function bindLongPressSend({ button, input: inp, onSubmit, durationMs = PRESS_DURATION_MS }) {
+  let pressTimer = null;
+  let pressArmed = false;
+
+  function start(e) {
+    if (button.disabled) return;
+    if (!inp.value.trim()) return;
+    if (e && e.cancelable) e.preventDefault();
+    pressArmed = true;
+    button.classList.add('pressing');
+    pressTimer = setTimeout(() => {
+      if (!pressArmed) return;
+      pressArmed = false;
+      pressTimer = null;
+      button.classList.remove('pressing');
+      onSubmit();
+    }, durationMs);
+  }
+  function cancel() {
+    if (!pressArmed && !pressTimer) return;
+    pressArmed = false;
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    button.classList.remove('pressing');
+  }
+
+  // 鼠标 / 触屏
+  button.addEventListener('mousedown',  start);
+  button.addEventListener('mouseup',    cancel);
+  button.addEventListener('mouseleave', cancel);
+  button.addEventListener('touchstart', start, { passive: false });
+  button.addEventListener('touchend',   cancel);
+  button.addEventListener('touchcancel',cancel);
+  button.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('blur', cancel);
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') cancel(); });
+
+  // 键盘 ↓ 键：与鼠标长按等价。
+  // 只在光标位于文本末尾时劫持——多行编辑中段的 ↓ 仍走原生光标下移。
+  inp.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowDown') return;
+    if (e.repeat || e.isComposing) return;
+    if (inp.classList.contains('dictating')) return;
+    if (!inp.value.trim()) return;
+    const atEnd = inp.selectionStart === inp.value.length
+               && inp.selectionEnd   === inp.value.length;
+    if (!atEnd) return;
+    e.preventDefault();
+    start();
+  });
+  inp.addEventListener('keyup', e => {
+    if (e.key === 'ArrowDown') cancel();
+  });
+  inp.addEventListener('blur', cancel);
+
+  // 输入为空 → 按钮自动禁用（避免无意义的按压）
+  inp.addEventListener('input', () => {
+    button.disabled = !inp.value.trim();
+  });
+  button.disabled = !inp.value.trim();
+
+  // 禁用 Enter 换行——每条消息是一个完整的念头，不分段、不连说
+  // 例外：IME 拼音选词 / 听写期间 Enter 是必需的，不能拦
+  inp.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (e.isComposing) return;
+    if (inp.classList.contains('dictating')) return;
+    e.preventDefault();
+  });
+
+  return { cancel };
+}
+
+// 写作场景的发送
+bindLongPressSend({ button: submitBtn, input: input, onSubmit: submitFlow });
+
+/* ── 每日开场场景：图 + 联想输入 + 长按沉入 ────────────────── */
+const dailyInput     = document.getElementById('dailyInput');
+const dailySubmitBtn = document.getElementById('dailySubmitBtn');
+const dailyImage     = document.getElementById('dailyImage');
+const dailyDate      = document.getElementById('dailyDate');
+let   lastDailyAssociation = '';   // 用户今天写下的联想，供后续 LLM 上下文复用
+let   _dailyResolve  = null;
+
+function waitForDailySubmit() {
+  return new Promise(resolve => { _dailyResolve = resolve; });
+}
+function dailyOpeningSubmit() {
+  const text = dailyInput.value.trim();
+  if (!text) return;
+  lastDailyAssociation = text;
+  if (_dailyResolve) {
+    const r = _dailyResolve;
+    _dailyResolve = null;
+    r(text);
+  }
+}
+// daily 输入框也需要自动高度
+dailyInput.addEventListener('input', () => {
+  dailyInput.style.height = 'auto';
+  dailyInput.style.height = dailyInput.scrollHeight + 'px';
+});
+bindLongPressSend({ button: dailySubmitBtn, input: dailyInput, onSubmit: dailyOpeningSubmit });
+
+// macOS 听写 / IME 合成检测
+const dictIndicator = document.getElementById('dictIndicator');
+const writeHint     = document.getElementById('writeHint');
+
+input.addEventListener('compositionstart', () => {
+  input.classList.add('dictating');
+  dictIndicator.classList.add('active');
+  writeHint.style.opacity = '0';
+});
+input.addEventListener('compositionend', () => {
+  input.classList.remove('dictating');
+  dictIndicator.classList.remove('active');
+  writeHint.style.opacity = '1';
+});
+
+/* ══════════════════════════════════════════════════════
+   HISTORY OVERLAY
+══════════════════════════════════════════════════════ */
+let histVisible = false;
+
+function showHistory() {
+  if (histVisible || !curPhil) return;
+  histVisible = true;
+
+  const overlay  = document.getElementById('histOverlay');
+  const content  = document.getElementById('histContent');
+  const empty    = document.getElementById('histEmpty');
+  const header   = document.getElementById('histHeader');
+
+  const d = P[curPhil];
+  header.textContent = `与 ${d.short} 的对话记录`;
+  content.innerHTML  = '';
+
+  const hist = convHistory.length > 0 ? convHistory : loadHistory(curPhil);
+
+  if (hist.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    for (let i = 0; i < hist.length; i += 2) {
+      const userMsg = hist[i];
+      const philMsg = hist[i + 1];
+
+      const wrap = document.createElement('div');
+      wrap.className = 'hist-exchange';
+
+      // User message
+      const userEl = document.createElement('p');
+      userEl.className = 'hist-msg-user';
+      userEl.textContent = userMsg.content;
+      wrap.appendChild(userEl);
+
+      // Philosopher's response
+      if (philMsg) {
+        const philEl = document.createElement('p');
+        philEl.className = 'hist-msg-phil';
+        philEl.textContent = philMsg.content;
+        wrap.appendChild(philEl);
+      }
+
+      content.appendChild(wrap);
+    }
+  }
+
+  overlay.style.display = 'block';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    overlay.style.opacity = '1';
+    overlay.scrollTop = overlay.scrollHeight;
+  }));
+}
+
+function hideHistory() {
+  if (!histVisible) return;
+  histVisible = false;
+  const overlay = document.getElementById('histOverlay');
+  overlay.style.opacity = '0';
+  setTimeout(() => { overlay.style.display = 'none'; }, 380);
+  if (curScene === 'sceneWriting') input.focus();
+}
+
+// ↓ 键：问候场景触发"开始回应"，回应场景触发"继续提问"
+// ↑ 键：写作场景（空输入时）打开历史；历史已开时关闭
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && histVisible) {
+    e.preventDefault(); hideHistory(); return;
+  }
+  if (e.key === 'ArrowUp') {
+    if (histVisible) { e.preventDefault(); hideHistory(); return; }
+    if (curScene === 'sceneWriting' && input.value === '') {
+      e.preventDefault(); showHistory(); return;
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    if (curScene === 'sceneGreeting') {
+      const btn = document.getElementById('startBtn');
+      if (parseFloat(btn.style.opacity) > 0.5) btn.click();
+    } else if (curScene === 'sceneResponse') {
+      // 还有更多 chunks：翻页；否则触发"继续提问"
+      if (respChunkIdx < respChunks.length - 1) {
+        advanceRespChunk();
+      } else if (parseFloat(replyBtn.style.opacity) > 0.5) {
+        replyBtn.click();
+      }
+    }
+  }
+});
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = input.scrollHeight + 'px';
+  // 按钮 disabled 状态由 bindLongPressSend 工厂统一同步，这里只管高度
+});
+
+/* ══════════════════════════════════════════════════════
+   API KEY MANAGEMENT
+══════════════════════════════════════════════════════ */
+const keyModal  = document.getElementById('keyModal');
+const keyInput  = document.getElementById('keyInput');
+const keyStatus = document.getElementById('keyStatus');
+const keyBtn    = document.getElementById('keyBtn');
+
+function updateKeyUI() {
+  if (DS.key) {
+    keyStatus.textContent = '· Key 已设置';
+    keyBtn.textContent = '更换';
+  } else {
+    keyStatus.textContent = '';
+    keyBtn.textContent = '设置 Key';
+  }
+}
+
+function openKeyModal() {
+  keyInput.value = DS.key || '';
+  keyModal.style.display = 'flex';
+  setTimeout(() => keyInput.focus(), 50);
+}
+
+function closeKeyModal() {
+  keyModal.style.display = 'none';
+}
+
+document.getElementById('keyBtn').addEventListener('click', openKeyModal);
+
+document.getElementById('keySaveBtn').addEventListener('click', () => {
+  const v = keyInput.value.trim().replace(/\s/g, '');
+  if (v) { DS.key = v; updateKeyUI(); }
+  closeKeyModal();
+});
+
+document.getElementById('keyCancelBtn').addEventListener('click', closeKeyModal);
+
+keyInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('keySaveBtn').click();
+  if (e.key === 'Escape') closeKeyModal();
+});
+
+// Init key UI
+updateKeyUI();
+
+// DeepSeek key modal 不再启动时直接弹 —— 由 bootstrapAuth() 在登录后决定
+
+// Clear memory button
+document.getElementById('clearMemBtn').addEventListener('click', () => {
+  if (curPhil && confirm(`清除与${P[curPhil].short}的所有对话记忆？`)) {
+    clearHistory(curPhil);
+    convHistory = [];
+    sessionCount = 0;
+    document.getElementById('clearMemBtn').style.display = 'none';
+  }
+});
+
+/* ══════════════════════════════════════════════════════
+   AUTH (Supabase)
+══════════════════════════════════════════════════════ */
+const authForm     = document.getElementById('authForm');
+const authEmail    = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const authSubmit   = document.getElementById('authSubmit');
+const authToggle   = document.getElementById('authToggle');
+const authTitle    = document.getElementById('authTitle');
+const authSub      = document.getElementById('authSub');
+const authError    = document.getElementById('authError');
+const authNote     = document.getElementById('authNote');
+const userEmailEl  = document.getElementById('userEmail');
+const signOutBtn   = document.getElementById('signOutBtn');
+
+let authMode = 'signin';   // 'signin' | 'signup'
+
+function setAuthMode(mode) {
+  authMode = mode;
+  authError.style.display = 'none';
+  authNote.style.display  = 'none';
+  if (mode === 'signin') {
+    authTitle.textContent  = '回到对话';
+    authSub.textContent    = '留下邮箱，思想者会在此等你';
+    authSubmit.textContent = '进入';
+    authToggle.textContent = '— 还没有账号？注册';
+    authPassword.autocomplete = 'current-password';
+  } else {
+    authTitle.textContent  = '初次相见';
+    authSub.textContent    = '一个邮箱，一段密码，便是你的所在';
+    authSubmit.textContent = '注册';
+    authToggle.textContent = '— 已经有账号？登录';
+    authPassword.autocomplete = 'new-password';
+  }
+}
+
+authToggle.addEventListener('click', () => {
+  setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+});
+
+function showAuthError(msg) {
+  authError.textContent  = msg;
+  authError.style.display = 'block';
+  authNote.style.display  = 'none';
+}
+
+function showAuthNote(msg) {
+  authNote.textContent   = msg;
+  authNote.style.display = 'block';
+  authError.style.display = 'none';
+}
+
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email    = authEmail.value.trim();
+  const password = authPassword.value;
+  if (!email || !password) return;
+
+  authSubmit.disabled = true;
+  authError.style.display = 'none';
+  authNote.style.display  = 'none';
+
+  try {
+    if (authMode === 'signin') {
+      const { data, error } = await supa.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // 登录成功，进入主流程
+      await onSignedIn(data.user);
+    } else {
+      const { data, error } = await supa.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: window.location.origin + window.location.pathname }
+      });
+      if (error) throw error;
+      // 若项目开启了"邮箱确认"，session 为 null —— 提示去邮箱确认
+      if (!data.session) {
+        showAuthNote('已向你的邮箱发送确认链接，点击链接后再来登录');
+        setAuthMode('signin');
+      } else {
+        await onSignedIn(data.user);
+      }
+    }
+  } catch (err) {
+    showAuthError(err?.message || '操作失败，请稍后再试');
+  } finally {
+    authSubmit.disabled = false;
+  }
+});
+
+async function onSignedIn(user) {
+  userEmailEl.textContent = user.email;
+  userEmailEl.style.display = 'inline';
+  signOutBtn.style.display  = 'inline-block';
+  authError.style.display   = 'none';
+  authNote.style.display    = 'none';
+  authPassword.value = '';
+  // 从 auth 场景过渡到 select；其它场景直接停在 auth 才会进入这里
+  if (curScene === 'sceneAuth' || curScene === null) {
+    await go('sceneSelect', 500);
+  }
+  // DeepSeek key 现由服务端持有，不再弹 key 弹窗
+}
+
+signOutBtn.addEventListener('click', async () => {
+  await supa.auth.signOut();
+  // 清理与本会话相关的瞬时状态（不动 localStorage 里的对话历史，因它按 philKey 隔离）
+  curPhil = null;
+  convHistory = [];
+  sessionCount = 0;
+  userEmailEl.style.display = 'none';
+  userEmailEl.textContent   = '';
+  signOutBtn.style.display  = 'none';
+  document.getElementById('clearMemBtn').style.display = 'none';
+  document.getElementById('backBtn').style.display     = 'none';
+  closeKeyModal();
+  setAuthMode('signin');
+  authEmail.value = '';
+  authPassword.value = '';
+  await go('sceneAuth', 400);
+});
+
+// 跨标签页同步登出 / token 刷新
+supa.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' && curScene !== 'sceneAuth') {
+    // 别的标签页登出了 —— 强制回到 auth
+    userEmailEl.style.display = 'none';
+    signOutBtn.style.display  = 'none';
+    go('sceneAuth', 400);
+  }
+});
+
+/* ══════════════════════════════════════════════════════
+   BOOTSTRAP — 决定首屏：有 session 进 select，无 session 进 auth
+══════════════════════════════════════════════════════ */
+(async function bootstrapAuth() {
+  setAuthMode('signin');
+  try {
+    const { data: { session } } = await supa.auth.getSession();
+    if (session?.user) {
+      userEmailEl.textContent   = session.user.email;
+      userEmailEl.style.display = 'inline';
+      signOutBtn.style.display  = 'inline-block';
+      await go('sceneSelect', 0);
+    } else {
+      await go('sceneAuth', 0);
+      setTimeout(() => authEmail.focus(), 100);
+    }
+  } catch (err) {
+    console.error('[auth] bootstrap failed', err);
+    await go('sceneAuth', 0);
+    showAuthError('未能连接到 Supabase，请检查页面顶部的 SUPA_URL / SUPA_ANON_KEY 配置');
+  }
+})();
+</script>
+</body>
+</html>

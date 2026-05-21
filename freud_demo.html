@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>15 Signals — Sigmund Freud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:      #F6F3EC;
+      --ink:        #1B1B18;
+      --ink-light:  #5C5C52;
+      --ink-faint:  #9C9C8E;
+      --border:     #D2CEC2;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--cream);
+    }
+
+    body {
+      font-family: 'EB Garamond', Georgia, serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "liga" 1, "kern" 1;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ── Header ── */
+    .header {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+    }
+
+    .signal-tag {
+      font-size: 10.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    /* ── Stage ── */
+    .stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Scenes: all absolutely stacked, transitions via opacity ── */
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 44px 0 36px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ─────────────────────────────── */
+    /* Scene: Welcome                  */
+    /* ─────────────────────────────── */
+    #sceneWelcome {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .portrait-wrap {
+      width: 124px;
+      height: 156px;
+      margin-bottom: 22px;
+    }
+
+    .thinker-name {
+      font-family: 'Playfair Display', serif;
+      font-weight: 900;
+      font-size: 30px;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .thinker-meta {
+      font-size: 10.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 28px;
+    }
+
+    .welcome-rule {
+      width: 28px;
+      height: 1px;
+      background: var(--border);
+      margin: 0 auto 24px;
+    }
+
+    .welcome-text {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.72;
+      color: var(--ink-light);
+      max-width: 290px;
+      margin-bottom: 40px;
+    }
+
+    .begin-cue {
+      background: none;
+      border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 8px 0;
+      animation: soft-pulse 2.6s ease-in-out infinite;
+    }
+
+    @keyframes soft-pulse {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 1; }
+    }
+
+    /* ─────────────────────────────── */
+    /* Scene: Writing                  */
+    /* ─────────────────────────────── */
+    #sceneWriting {
+      justify-content: space-between;
+    }
+
+    .writing-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 0 0 14px;
+      font-family: 'EB Garamond', serif;
+      font-size: 18px;
+      line-height: 1.75;
+      color: var(--ink);
+      resize: none;
+      outline: none;
+      caret-color: var(--ink);
+      overflow: hidden;
+    }
+
+    textarea::placeholder {
+      color: var(--ink-faint);
+      font-style: italic;
+    }
+
+    .writing-footer {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .writing-hint {
+      font-size: 11px;
+      color: var(--ink-faint);
+      font-style: italic;
+    }
+
+    .submit-btn {
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--ink);
+      padding: 9px 20px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .submit-btn:hover { background: var(--ink); color: var(--cream); }
+    .submit-btn:disabled { opacity: 0.2; cursor: default; }
+
+    /* ─────────────────────────────── */
+    /* Scene: Thinking                 */
+    /* ─────────────────────────────── */
+    #sceneThinking {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dots i {
+      display: block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ink-faint);
+      animation: breathe 1.6s ease-in-out infinite;
+    }
+
+    .dots i:nth-child(2) { animation-delay: 0.22s; }
+    .dots i:nth-child(3) { animation-delay: 0.44s; }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.2; transform: scale(0.85); }
+      50%       { opacity: 1;   transform: scale(1.15); }
+    }
+
+    /* ─────────────────────────────── */
+    /* Scene: Response                 */
+    /* ─────────────────────────────── */
+    #sceneResponse {
+      justify-content: center;
+    }
+
+    .response-attribution {
+      flex-shrink: 0;
+      font-size: 10.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 22px;
+    }
+
+    #responseText {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 17px;
+      line-height: 1.84;
+      color: var(--ink-light);
+      white-space: pre-line;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .reply-cue {
+      flex-shrink: 0;
+      margin-top: 36px;
+      background: none;
+      border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 8px 0;
+      opacity: 0;
+      transition: color 0.15s ease;
+      text-align: left;
+    }
+
+    .reply-cue:hover { color: var(--ink); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <span class="logo">15 Signals</span>
+    <span class="signal-tag">信号 07 · 压抑</span>
+  </header>
+
+  <main class="stage">
+
+    <!-- ── Welcome ── -->
+    <div class="scene" id="sceneWelcome">
+      <div class="portrait-wrap">
+        <svg viewBox="0 0 148 186" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+          <rect x="1" y="1" width="146" height="184" fill="#F6F3EC" stroke="#1B1B18" stroke-width="2.5"/>
+          <rect x="6.5" y="6.5" width="135" height="173" fill="none" stroke="#1B1B18" stroke-width="0.6"/>
+          <rect x="7" y="7" width="134" height="172" fill="#1B1B18"/>
+          <g stroke="#272722" stroke-width="1.1">
+            <line x1="7" y1="38" x2="45" y2="7"/><line x1="7" y1="66" x2="73" y2="7"/>
+            <line x1="7" y1="94" x2="101" y2="7"/><line x1="7" y1="122" x2="129" y2="7"/>
+            <line x1="7" y1="150" x2="141" y2="26"/><line x1="20" y1="179" x2="141" y2="58"/>
+            <line x1="48" y1="179" x2="141" y2="88"/><line x1="76" y1="179" x2="141" y2="118"/>
+            <line x1="104" y1="179" x2="141" y2="148"/>
+          </g>
+          <path d="M7 179 L7 152 L38 136 L58 147 L74 154 L74 179Z" fill="#1B1B18"/>
+          <path d="M141 179 L141 152 L110 136 L90 147 L74 154 L74 179Z" fill="#1B1B18"/>
+          <polygon points="62,147 74,162 86,147 74,140" fill="#F6F3EC"/>
+          <line x1="74" y1="162" x2="74" y2="179" stroke="#F6F3EC" stroke-width="6"/>
+          <rect x="66" y="148" width="16" height="22" rx="6" fill="#EDE0C4"/>
+          <ellipse cx="74" cy="83" rx="52" ry="60" fill="#1B1B18"/>
+          <ellipse cx="74" cy="88" rx="38" ry="47" fill="#EDE0C4"/>
+          <line x1="57" y1="65" x2="91" y2="65" stroke="#C8B898" stroke-width="0.7" opacity="0.55"/>
+          <circle cx="61" cy="86" r="13" fill="none" stroke="#1B1B18" stroke-width="2.8"/>
+          <circle cx="87" cy="86" r="13" fill="none" stroke="#1B1B18" stroke-width="2.8"/>
+          <line x1="72" y1="86" x2="76" y2="86" stroke="#1B1B18" stroke-width="2"/>
+          <line x1="48" y1="83" x2="40" y2="80" stroke="#1B1B18" stroke-width="2.5"/>
+          <line x1="100" y1="83" x2="108" y2="80" stroke="#1B1B18" stroke-width="2.5"/>
+          <path d="M74 99 Q69 110 67 117 Q71 121 74 122 Q77 121 81 117 Q79 110 74 99" fill="#C8B080" opacity="0.45"/>
+          <path d="M60 119 Q66 128 74 125 Q82 128 88 119 Q82 115 74 116 Q66 115 60 119Z" fill="#1B1B18"/>
+          <path d="M42 128 Q36 152 39 172 Q53 184 74 186 Q95 184 109 172 Q112 152 106 128 Q91 134 74 135 Q57 134 42 128Z" fill="#1B1B18"/>
+          <g stroke="#272722" stroke-width="0.9" opacity="0.55">
+            <line x1="54" y1="135" x2="52" y2="174"/><line x1="63" y1="135" x2="62" y2="180"/>
+            <line x1="74" y1="135" x2="74" y2="183"/><line x1="85" y1="135" x2="86" y2="180"/>
+            <line x1="94" y1="135" x2="96" y2="174"/>
+          </g>
+          <ellipse cx="74" cy="172" rx="16" ry="6" fill="#272722" opacity="0.4"/>
+        </svg>
+      </div>
+      <h1 class="thinker-name">Sigmund Freud</h1>
+      <p class="thinker-meta">1856 — 1939 &nbsp;·&nbsp; 精神分析</p>
+      <div class="welcome-rule"></div>
+      <p class="welcome-text">「你来此处，是为了询问某些事。我猜想，在那个问题更深的地方，你已经知道答案必定是什么了。」</p>
+      <button class="begin-cue" id="beginBtn">开始 →</button>
+    </div>
+
+    <!-- ── Writing ── -->
+    <div class="scene" id="sceneWriting">
+      <div class="writing-body">
+        <textarea id="userInput" placeholder="向他提问……关于你内心的任何事" rows="1"></textarea>
+      </div>
+      <div class="writing-footer">
+        <span class="writing-hint">⌘ 回车 提交</span>
+        <button class="submit-btn" id="submitBtn">提交</button>
+      </div>
+    </div>
+
+    <!-- ── Thinking ── -->
+    <div class="scene" id="sceneThinking">
+      <div class="dots"><i></i><i></i><i></i></div>
+    </div>
+
+    <!-- ── Response ── -->
+    <div class="scene" id="sceneResponse">
+      <span class="response-attribution">西格蒙德·弗洛伊德</span>
+      <div id="responseText"></div>
+      <button class="reply-cue" id="replyBtn">— 继续提问</button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  /* ── Responses ── */
+  const R = {
+    anxiety: `你所称之为焦虑的，很少是它表面呈现的样子。每一种有意识的恐惧之下，都隐藏着更深的暗流——那个无法直言的被压抑的愿望。自我，这个永远被本我的驱力与超我的谴责夹在中间的忠实仆人，将这种不安制造出来，作为一种警告信号。
+
+我想请你认真思考这个问题：你究竟害怕失去的是什么？因为在那个答案里，藏着你欲望的真实结构。神经症患者并非受苦于记忆本身——他受苦于无法记起自己埋葬了什么。`,
+
+    love: `你将这种依恋称为爱，也许确实如此。但请允许我指出，我们所称的爱，很少是一种简单的形成物。它是复合的——一部分是温情，一部分是投射，一部分是我们在有语言之前便已结成的那些早期纽带留下的未竟残余。
+
+在爱人眼中，被爱者永远不完全是他们自己。他们同时也是另一个人——某个更古老的人，某个来自童年的人，某个曾经对我们拥有巨大权力的人。我想问你：这个人让你想起了谁？也许不是有意识的。但在你内心某个更古老、更难言说的角落里。`,
+
+    work: `你所描述的雄心，并非仅仅是对成就的驱动。它是更深层能量的升华——力比多向社会认可的目标的转移。文明本身，就是建立在这一机制之上的。
+
+当一个人以异常的强度投入工作时，他往往是在逃离某物，与其说是在追求某物。值得审视的问题不是你想要建造什么，而是你想通过建造来逃离什么。这两个答案很少是相同的，而它们之间的距离，正是真正有意思的工作开始的地方。`,
+
+    sadness: `悲伤与忧郁，虽然面貌相似，却不是同一种苦难。在悲伤中，是世界变得贫乏而空洞。在忧郁中，是自我本身变得贫乏而空洞——这一区别，在诊断上具有重要意义。
+
+那无法找到其适当外部对象的攻击性，转而指向自身。你并非仅仅是悲伤——在某种更深的层面上，你也许是在愤怒，愤怒于某个你无法允许自己愤怒的人。我想问：这悲伤，在最深的意义上，真正指向的是谁？`,
+
+    dream: `梦并非沉睡大脑的混乱残余。它是通往无意识的王道——那条唯一的夜间通道，被压抑的精神生活材料得以以伪装的形式在此表达自身。
+
+我坚持认为，每一个梦都是愿望的达成。你醒来时所记得的——梦的显现内容——是梦的工作对潜在内容的审查式翻译。那些象征并非随意的，它们是无意识在用它本来的语言说话。把梦的细节告诉我，让我们像阅读一部外语文本一样，共同解读它。`,
+
+    family: `你所描述的与这个人物的关系——无论是父母、兄弟姐妹，还是任何占据那个位置的人——并非仅仅是传记性的。这些早年的纽带形成了一个模板，我们所有后续的依附关系，都在这个模板上无意识地建构起来。
+
+家庭罗曼史从未真正完结。我们离开他们的家很久之后，仍然把父母带在身体里——将他们内摄，内化，变成我们内心世界的摆设。问题不是他们是否塑造了你——他们当然塑造了，不可避免地——而是究竟怎样精确地塑造了你，以及你是否仍在演绎一个已遗忘了其作者是谁的剧本。`,
+
+    anger: `愤怒，如果认真审视，几乎始终是一种次级情绪。它是某种更古老、更痛苦的东西的表面喷发——通常是悲伤，通常是屈辱，通常是曾被拒绝或背叛的爱。
+
+暴怒的人，在某种更深的层面上，通常是哀悼的人。愤怒的能量，是从一个更古老的痛苦储藏室里借来的。我想问：这愤怒之前发生了什么？而它，在最深、最诚实的意义上，真正指向的是谁？你所能说出名字的那个靶子，很少是最初的那个。`,
+
+    desire: `你所称的欲望，是本我的信使——本能生命寻求释放的向上压力。但请注意：有意识的心灵以为自己渴望的，很少是最初的对象。通过移置的机制，那个原始的愿望——太具威胁性，太受禁止——已被转移到某个更被允许的东西之上。
+
+要问的问题不是你是否应该渴望，而是：当你伸手去拿这个特定的东西时，你究竟真正在伸手去拿什么？欲望的对象，在某种程度上，始终是某种别的东西的象征。`,
+
+    identity: `你所相信的那个自我，并非原初的。它是一个建构物——历经数十年，从认同、内摄，以及抵御早期焦虑而竖立起来的防御的残余中，艰苦地建构而来。在那个说话的「我」之下，是一个先于语言本身存在的、更为动荡的基底。
+
+这不是绝望的理由，这是探究的理由。自我不是一个等待被发现的固定事实，而是一个需要被理解的过程——层叠的，矛盾的，比它的表面呈现要有趣得多。问题不是你是谁，而是你曾经需要成为什么，以及你在那个成为的过程中牺牲了什么。`,
+
+    default: `你提出的这个问题，触及的，我猜测，远不止你直接说出的那些。几乎总是这样。有意识的心灵呈现症状，无意识持有病因。
+
+我想说的是：你恰恰以这种方式来表述这个问题——这些词，这个框架，这个时刻——本身就是有意义的。精神生活中没有什么是偶然的。我好奇，是什么让你今天而非另一天，提出了这个问题？`
+  };
+
+  function pick(t) {
+    t = t.toLowerCase();
+    if (/焦虑|anxiety|anxious|fear|scared|worr|担心|恐惧|害怕|紧张|不安/.test(t)) return R.anxiety;
+    if (/爱|love|relationship|喜欢|感情|伴侣|partner|婚姻|marriage|恋爱|romantic/.test(t)) return R.love;
+    if (/工作|work|career|成就|achievement|success|成功|职业|ambition|野心|目标/.test(t)) return R.work;
+    if (/悲伤|sad|depress|痛苦|沮丧|失落|melanchol|empty|空虚|低落|难过|grief/.test(t)) return R.sadness;
+    if (/梦|dream|睡眠|sleep|噩梦|nightmare/.test(t)) return R.dream;
+    if (/父母|母亲|父亲|family|parents|mother|father|童年|childhood|家庭|兄弟|姐妹|sibling/.test(t)) return R.family;
+    if (/愤怒|anger|angry|frustrat|生气|恨|hate|rage|怒/.test(t)) return R.anger;
+    if (/欲望|desire|want|想要|渴望|longing|need|需要|向往/.test(t)) return R.desire;
+    if (/自我|self|identity|身份|认同|自己|who am i|我是谁|存在|being/.test(t)) return R.identity;
+    return R.default;
+  }
+
+  /* ── State machine ── */
+  const SCENES = ['sceneWelcome','sceneWriting','sceneThinking','sceneResponse'];
+  const el = {};
+  SCENES.forEach(id => el[id] = document.getElementById(id));
+
+  const input    = document.getElementById('userInput');
+  const submitBtn = document.getElementById('submitBtn');
+  const replyBtn  = document.getElementById('replyBtn');
+  const respText  = document.getElementById('responseText');
+
+  let current = 'sceneWelcome';
+
+  function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function css(node, props) { Object.assign(node.style, props); }
+
+  async function transitionTo(nextId, dur = 560) {
+    const out = el[current];
+    const inn = el[nextId];
+
+    out.style.pointerEvents = 'none';
+    css(out, { transition: `opacity ${dur}ms ease`, opacity: '0' });
+
+    css(inn, { transition: 'none', opacity: '0' });
+    await pause(dur);
+
+    inn.style.pointerEvents = 'auto';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      css(inn, { transition: `opacity ${dur}ms ease`, opacity: '1' });
+    }));
+
+    current = nextId;
+  }
+
+  /* ── Begin: welcome → writing ── */
+  document.getElementById('beginBtn').addEventListener('click', async () => {
+    await transitionTo('sceneWriting', 600);
+    input.focus();
+  });
+
+  /* ── Submit flow ── */
+  async function submitFlow() {
+    const q = input.value.trim();
+    if (!q) return;
+
+    submitBtn.disabled = true;
+
+    /* 1 — textarea text dissolves in place */
+    css(input, {
+      transition: 'opacity 1.3s cubic-bezier(0.4,0,1,1), filter 1.3s cubic-bezier(0.4,0,1,1)',
+      opacity: '0',
+      filter: 'blur(9px)'
+    });
+
+    await pause(1400);
+
+    /* 2 — clear textarea silently, restore it for next use */
+    css(input, { transition: 'none', opacity: '1', filter: 'blur(0px)' });
+    input.value = '';
+    input.style.height = 'auto';
+
+    /* 3 — transition to thinking */
+    await transitionTo('sceneThinking', 400);
+    await pause(950);
+
+    /* 4 — prepare response, pre-blur */
+    respText.textContent = pick(q);
+    replyBtn.style.opacity = '0';
+    css(respText, { opacity: '0', filter: 'blur(5px)', transition: 'none' });
+
+    /* 5 — crossfade to response scene */
+    await transitionTo('sceneResponse', 320);
+
+    /* 6 — response text emerges within scene */
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      css(respText, {
+        transition: 'opacity 1.7s cubic-bezier(0,0,0.25,1), filter 1.7s cubic-bezier(0,0,0.25,1)',
+        opacity: '1',
+        filter: 'blur(0px)'
+      });
+    }));
+
+    /* 7 — reply cue fades in after text has appeared */
+    await pause(2200);
+    css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
+
+    submitBtn.disabled = false;
+  }
+
+  /* ── Reply: response → writing ── */
+  replyBtn.addEventListener('click', async () => {
+    css(replyBtn, { transition: 'opacity 0.25s ease', opacity: '0' });
+    await transitionTo('sceneWriting', 580);
+    input.focus();
+  });
+
+  /* ── Wire up ── */
+  submitBtn.addEventListener('click', submitFlow);
+  input.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitFlow();
+  });
+
+  /* ── Textarea auto-grow ── */
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+  });
+</script>
+</body>
+</html>

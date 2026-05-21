@@ -1,0 +1,29 @@
+# 不该上传到 Vercel 的本地/敏感/无关文件
+.env
+.env.example
+.env.local
+
+# 文档与计划
+*.md
+15signals_plan.md
+data_flow.md
+direction_merged_spec.md
+signals_rubric.md
+
+# 数据库 schema + 迁移（只在 Supabase 后台跑）
+schema.sql
+migrations/
+
+# 本地 Python 代理（已被 api/deepseek.js 替代）
+proxy.py
+
+# 旧 demo
+freud_demo.html
+
+# 知识库 ingest 脚本与原始数据
+mentor_kb/
+scripts/
+
+# 系统
+.DS_Store
+*.log
