@@ -1668,7 +1668,10 @@ function buildSystemPrompt(philKey) {
   return prompts[philKey] + shared;
 }
 
-// 对话历史持久化（按导师存储，最多保留 30 条消息 = 15 轮对话）
+// 对话历史持久化
+//   - 远端（权威）：Supabase sessions/turns，通过 /api/session/{start,turn,turns} 读写
+//   - 本地（缓存兼离线兜底）：localStorage conv_${philKey}
+//   - 最多保留 30 条消息 = 15 轮对话
 const HISTORY_LIMIT = 30;
 
 function loadHistory(philKey) {
@@ -1685,6 +1688,43 @@ function saveHistory(philKey, history) {
 function clearHistory(philKey) {
   localStorage.removeItem(`conv_${philKey}`);
 }
+
+/* ── 远端 API 辅助 ── */
+async function authHeader() {
+  const { data: { session } } = await supa.auth.getSession();
+  if (!session) return null;
+  return { 'Authorization': `Bearer ${session.access_token}` };
+}
+
+async function apiPost(path, body) {
+  const auth = await authHeader();
+  if (!auth) throw new Error('NOT_SIGNED_IN');
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`POST ${path} ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+async function apiGet(path) {
+  const auth = await authHeader();
+  if (!auth) throw new Error('NOT_SIGNED_IN');
+  const res = await fetch(path, { headers: auth });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`GET ${path} ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+// turns 表里 role 是 'user' | 'mentor'；本地 convHistory 沿用 OpenAI 风格 'user' | 'assistant'
+const roleToServer  = r => (r === 'assistant' ? 'mentor' : r);
+const roleFromServer = r => (r === 'mentor' ? 'assistant' : r);
 
 async function callDeepSeek(userMsg, philKey) {
   // 拿 Supabase 当前用户的 access_token，由 /api/deepseek 校验后再转发到上游
@@ -1709,6 +1749,20 @@ async function callDeepSeek(userMsg, philKey) {
   const reply = data.choices[0].message.content.trim();
   convHistory.push({ role: 'user', content: userMsg }, { role: 'assistant', content: reply });
   saveHistory(philKey, convHistory);
+
+  // 远端：把这一对 turn 写到 sessions/turns（best-effort，不阻塞 UX）
+  if (currentSessionId) {
+    apiPost('/api/session/turn', {
+      session_id: currentSessionId,
+      turns: [
+        { role: 'user',   content: userMsg },
+        { role: 'mentor', content: reply   },
+      ]
+    }).catch(err => {
+      console.warn('[session/turn] 远端写入失败，本地缓存仍保留', err);
+    });
+  }
+
   return reply;
 }
 
@@ -1722,6 +1776,7 @@ let lastRespText = '';
 let convHistory = [];
 let respChunks = [];
 let respChunkIdx = 0;
+let currentSessionId = null;   // Supabase sessions.id；用于把 turn / summary 关联到具体会话
 
 const scenes = {};
 ['sceneAuth','sceneSelect','sceneSignal','sceneGreeting','sceneWriting','sceneThinking','sceneResponse',
@@ -1782,7 +1837,31 @@ const philCards = document.getElementById('philCards');
 async function startSession(philKey) {
   curPhil = philKey;
   sessionCount = 0;
-  convHistory = loadHistory(philKey); // 加载历史记忆
+  currentSessionId = null;
+
+  // 1) 默认先用本地缓存填 convHistory，确保即便后端失联也能起步
+  convHistory = loadHistory(philKey);
+
+  // 2) 远端：拿 / 建一段活跃会话，并用它的 turns 覆盖本地缓存
+  try {
+    const started = await apiPost('/api/session/start', { mentor_id: philKey });
+    currentSessionId = started.session_id;
+    if (started.resumed && started.turn_count > 0) {
+      const { turns } = await apiGet(`/api/session/turns?session_id=${currentSessionId}`);
+      convHistory = (turns || []).map(t => ({
+        role:    roleFromServer(t.role),
+        content: t.content
+      }));
+      saveHistory(philKey, convHistory);  // 同步回本地缓存，保持一致
+    } else if (!started.resumed) {
+      // 新会话：清掉旧的本地缓存，避免上次未关闭的对话上下文混进来
+      convHistory = [];
+      saveHistory(philKey, convHistory);
+    }
+  } catch (err) {
+    console.warn('[session/start] 远端失败，回退到本地 localStorage', err);
+  }
+
   const hasMem = convHistory.length > 0;
   document.getElementById('clearMemBtn').style.display = hasMem ? 'block' : 'none';
   const d = P[philKey];
@@ -1952,6 +2031,10 @@ async function advanceRespChunk() {
     css(moreHint, { transition: 'opacity 0.8s ease', opacity: '1' });
   } else {
     css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
+    // 翻到最后一段时也要露出"结束对话"——和 submitFlow 的尾段逻辑保持一致
+    if (sessionCount >= 1) {
+      css(document.getElementById('endBtn'), { transition: 'opacity 1.4s ease 0.6s', opacity: '0.85' });
+    }
   }
 }
 
@@ -2027,9 +2110,9 @@ async function submitFlow() {
     css(moreHint, { transition: 'opacity 0.9s ease', opacity: '1' });
   } else {
     css(replyBtn, { transition: 'opacity 0.9s ease', opacity: '1' });
-    // 第二轮起才露出"结束对话"——首轮回应就让人结束太突兀
-    if (sessionCount >= 2) {
-      css(document.getElementById('endBtn'), { transition: 'opacity 1.4s ease 0.6s', opacity: '0.7' });
+    // 首轮起就露出"结束对话"——之前门槛是 2 轮，叠上多 chunk 隐藏 bug 导致基本看不到
+    if (sessionCount >= 1) {
+      css(document.getElementById('endBtn'), { transition: 'opacity 1.4s ease 0.6s', opacity: '0.85' });
     }
   }
   // 下一轮回到写作场景时输入框已被清空——按钮应保持禁用，
@@ -2336,10 +2419,12 @@ async function fetchSummary(mentorId, messages) {
     if (session?.access_token) authHeader = { 'Authorization': `Bearer ${session.access_token}` };
   } catch (_) { /* 离线/未登录都允许复盘 */ }
 
+  const body = { mentor_id: mentorId, messages };
+  if (Number.isInteger(currentSessionId)) body.session_id = currentSessionId;
   const res = await fetch(REVIEW_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader },
-    body: JSON.stringify({ mentor_id: mentorId, messages })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
@@ -2541,6 +2626,8 @@ async function endSessionAndReview() {
   //     如果未来想强制每次结束=清场，可在此 clearHistory(curPhil)
   convHistory = [];
   sessionCount = 0;
+  // 远端这条 session 已被 close.js 标记 closed_by_user；本地 id 也置空，下次重新 start
+  currentSessionId = null;
 
   renderReview(entry);
   await go('sceneReview', 600);
@@ -2745,6 +2832,7 @@ signOutBtn.addEventListener('click', async () => {
   curPhil = null;
   convHistory = [];
   sessionCount = 0;
+  currentSessionId = null;
   userEmailEl.style.display = 'none';
   userEmailEl.textContent   = '';
   signOutBtn.style.display  = 'none';

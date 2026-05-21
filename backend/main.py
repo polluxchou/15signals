@@ -39,6 +39,7 @@ from .db import (
     persist_summary,
 )
 from .deepseek_client import DeepSeekError, call_mentor_response, call_summary
+from .memory import extract_memories_from_summary, reinforce_memories, retrieve_user_memories
 from .prompts import (
     build_mentor_response_messages,
     build_mentor_response_system_prompt,
@@ -46,6 +47,7 @@ from .prompts import (
     build_summary_user_message,
 )
 from .retrieval import embed_query, retrieve_mentor_kb
+from .scoring import score_and_persist_turn
 from .signals_meta import SIGNAL_META, SIGNAL_NAMES
 
 # 项目根目录的 .env 也读一下（与 proxy.py 行为一致）
@@ -273,6 +275,22 @@ async def session_close(req: SessionCloseRequest) -> SessionCloseResponse:
         if not persisted:
             persistence_note = result.get("reason")
 
+    # ─── P2 · 从 summary 抽取 episodic_memories（仅 DB 可用且有 user/session 时） ───
+    memories_extracted = 0
+    if persisted and req.user_id and session_id_out:
+        try:
+            memories_extracted = await anyio.to_thread.run_sync(
+                extract_memories_from_summary,
+                req.user_id, session_id_out, req.mentor_id, summary_payload,
+            )
+        except Exception as e:
+            # 抽取失败不影响复盘返回——下次启动时还能从 last_closed_summary 拿到整体印象
+            logger.warning("memory extraction failed (session=%s): %s", session_id_out, e)
+
+    if memories_extracted > 0:
+        extra = f"; extracted {memories_extracted} memories"
+        persistence_note = (persistence_note + extra) if persistence_note else extra.lstrip("; ")
+
     return SessionCloseResponse(
         title=title,
         overall_intensity=overall,
@@ -369,6 +387,15 @@ class TurnRetrievalDebug(BaseModel):
     forbidden_moves: list[str]
 
 
+class MemoryRecall(BaseModel):
+    memory_id: int
+    source_quote: str | None
+    memory_type: str
+    days_ago: float
+    salience: float
+    similarity: float
+
+
 class SessionTurnResponse(BaseModel):
     session_id: int
     turn_count_after: int
@@ -376,10 +403,11 @@ class SessionTurnResponse(BaseModel):
     mentor_turn_id: int
     mentor_response: str
     retrieval: TurnRetrievalDebug | None = None
+    memories_recalled: list[MemoryRecall] = []
 
 
 @app.post("/session/turn", response_model=SessionTurnResponse)
-async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
+async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> SessionTurnResponse:
     """
     单轮对话：
     1. 读 session 元数据 + 历史 turns
@@ -419,7 +447,17 @@ async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
         retrieve_mentor_kb, mentor_id, q_emb, req.top_k_concepts, req.top_k_voice, True,
     )
 
-    # 3. 决定是否注入跨会话记忆：仅当本 session 还没有 turns 时
+    # 2b. 召回该用户的 episodic_memories（不限 mentor，记忆是"用户的"）
+    user_memories = await anyio.to_thread.run_sync(
+        retrieve_user_memories, user_id, q_emb, None, 5, 0.1,
+    )
+    # 强化被召回的记忆：salience += 0.05, reinforcement_count += 1, last_reinforced_at = now()
+    if user_memories:
+        await anyio.to_thread.run_sync(
+            reinforce_memories, [m["memory_id"] for m in user_memories], 0.05,
+        )
+
+    # 3. 决定是否注入跨会话 summary：仅当本 session 还没有 turns 时
     last_summary_for_prompt = None
     if sess_meta["turn_count"] == 0:
         # 重新拿一次 last_closed_summary（不通过 get_or_create_active_session，因为它在创建之后才返回）
@@ -448,6 +486,7 @@ async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
         kb_chunks=kb_chunks,
         last_closed_summary=last_summary_for_prompt,
         session_turn_count=sess_meta["turn_count"],
+        user_memories=user_memories,
     )
     msgs = build_mentor_response_messages(history, req.user_input)
 
@@ -467,12 +506,16 @@ async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
     mentor_meta = {
         "kb_concepts_used": [c["title"] for c in kb_chunks["concepts"]],
         "kb_voice_used": [c["title"] for c in kb_chunks["voice_examples"]],
-        "had_cross_session_memory": last_summary_for_prompt is not None,
+        "had_cross_session_summary": last_summary_for_prompt is not None,
+        "memory_ids_recalled": [m["memory_id"] for m in user_memories],
         "model": os.environ.get("DEEPSEEK_MODEL_MENTOR", "deepseek-chat"),
     }
     mentor_turn_id = await anyio.to_thread.run_sync(
         insert_turn, req.session_id, "mentor", mentor_text, mentor_meta,
     )
+
+    # 6. 后台异步给本轮 user input 打 15 信号分（不阻塞响应）
+    background.add_task(score_and_persist_turn, user_turn_id, user_id, req.user_input)
 
     return SessionTurnResponse(
         session_id=req.session_id,
@@ -485,6 +528,17 @@ async def session_turn(req: SessionTurnRequest) -> SessionTurnResponse:
             voice_examples=[c["title"] for c in kb_chunks["voice_examples"]],
             forbidden_moves=[c["title"] for c in kb_chunks["forbidden_moves"]],
         ) if req.debug else None,
+        memories_recalled=[
+            MemoryRecall(
+                memory_id=m["memory_id"],
+                source_quote=m.get("source_quote"),
+                memory_type=m["memory_type"],
+                days_ago=m["days_ago"],
+                salience=m["current_salience"],
+                similarity=m["similarity"],
+            )
+            for m in user_memories
+        ] if req.debug else [],
     )
 
 

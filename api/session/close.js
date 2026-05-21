@@ -330,7 +330,9 @@ function getAdminClient() {
 }
 
 // best-effort 写入 sessions.summary
-async function persistSummary({ authUserId, mentorId, summaryPayload, messages }) {
+// 优先：sessionId 已知 → UPDATE 那行（前端用 /api/session/start + /turn 建好的 live session）
+// 兜底：sessionId 未提供 → 旧路径，INSERT 一行 closed_by_user 的孤立 session
+async function persistSummary({ authUserId, mentorId, summaryPayload, messages, sessionId }) {
   const admin = getAdminClient();
   if (!admin) {
     return { persisted: false, reason: 'SUPABASE_SERVICE_ROLE_KEY not configured' };
@@ -347,9 +349,28 @@ async function persistSummary({ authUserId, mentorId, summaryPayload, messages }
       return { persisted: false, reason: `no public.users row for auth_user_id ${authUserId}` };
     }
     const userId = userRow.id;
-
-    // 2. INSERT a new session row（每次复盘当成一个独立 session 沉淀）
     const now = new Date().toISOString();
+
+    // 2a) 走 UPDATE 分支：把 live session 标记为关闭并写入 summary
+    if (Number.isInteger(sessionId)) {
+      const { data: sessionRow, error: updErr } = await admin
+        .from('sessions')
+        .update({
+          status: 'closed_by_user',
+          closed_at: now,
+          summary: summaryPayload,
+          summary_generated_at: now,
+        })
+        .eq('id', sessionId)
+        .eq('user_id', userId)        // 防御性：service-role 也别越界
+        .select('id')
+        .single();
+      if (updErr) return { persisted: false, reason: `sessions update: ${updErr.message}` };
+      if (!sessionRow) return { persisted: false, reason: 'session not found or not owned' };
+      return { persisted: true, session_id: sessionRow.id, mode: 'update' };
+    }
+
+    // 2b) 兜底：旧路径，建一个孤立的 closed session（用于本地脱机使用，没经过 /turn）
     const { data: sessionRow, error: sessErr } = await admin
       .from('sessions')
       .insert({
@@ -366,7 +387,7 @@ async function persistSummary({ authUserId, mentorId, summaryPayload, messages }
       .select('id')
       .single();
     if (sessErr) return { persisted: false, reason: `sessions insert: ${sessErr.message}` };
-    return { persisted: true, session_id: sessionRow?.id || null };
+    return { persisted: true, session_id: sessionRow?.id || null, mode: 'insert' };
   } catch (e) {
     return { persisted: false, reason: `unexpected: ${e?.message || e}` };
   }
@@ -399,6 +420,7 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const mentorId = body.mentor_id;
   const messages = body.messages;
+  const sessionId = Number.isInteger(body.session_id) ? body.session_id : null;
   if (!MENTOR_VOICE[mentorId]) {
     return res.status(400).json({ error: `invalid mentor_id: ${mentorId}` });
   }
@@ -438,6 +460,7 @@ export default async function handler(req, res) {
     mentorId,
     summaryPayload,
     messages,
+    sessionId,
   });
 
   // ─── 6. 返回 ───
