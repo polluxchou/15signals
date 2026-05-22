@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Literal
@@ -25,6 +26,7 @@ import anyio
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from .aggregation import aggregate_dimensions, overall_intensity, top_signals
@@ -39,7 +41,7 @@ from .db import (
     mark_session_closed,
     persist_summary,
 )
-from .deepseek_client import DeepSeekError, call_mentor_response, call_summary
+from .deepseek_client import DeepSeekError, call_mentor_response, call_summary, stream_mentor_response
 from .jobs import run_consolidate, run_decay, run_rollover
 from .memory import extract_memories_from_summary, reinforce_memories, retrieve_user_memories
 from .prompts import (
@@ -51,6 +53,7 @@ from .prompts import (
 from .retrieval import embed_query, retrieve_mentor_kb
 from .scoring import score_and_persist_turn
 from .signals_meta import SIGNAL_META, SIGNAL_NAMES
+from .themes import reevaluate_session_themes, should_reevaluate_themes
 
 # 项目根目录的 .env 也读一下（与 proxy.py 行为一致）
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -524,6 +527,11 @@ async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> 
     # 6. 后台异步给本轮 user input 打 15 信号分（不阻塞响应）
     background.add_task(score_and_persist_turn, user_turn_id, user_id, req.user_input)
 
+    # 6b. 后台主题重评（每 3 次 user 输入触发一次）
+    new_user_turn_index = sess_meta["turn_count"] + 1
+    if should_reevaluate_themes(new_user_turn_index):
+        background.add_task(reevaluate_session_themes, req.session_id)
+
     return SessionTurnResponse(
         session_id=req.session_id,
         turn_count_after=sess_meta["turn_count"] + 2,
@@ -588,6 +596,179 @@ async def admin_consolidate(
 ) -> dict:
     _require_admin(x_admin_token)
     return await anyio.to_thread.run_sync(run_consolidate)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# /session/turn/stream · SSE 流式版（前端 EventSource 友好）
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# SSE 事件类型：
+#   - event: meta     data: {session_id, user_turn_id, retrieval, memories_recalled}
+#   - event: delta    data: {text}                   ← 重复多次，逐字累积
+#   - event: done     data: {mentor_turn_id, turn_count_after}
+#   - event: error    data: {detail}
+#
+# 客户端伪代码：
+#   const es = fetch('/session/turn/stream', {...POST...}, { body: SSEReader })
+#   for-await (const evt of es) { update UI }
+
+
+@app.post("/session/turn/stream")
+async def session_turn_stream(req: SessionTurnRequest):
+    """流式版本的 /session/turn。返回 SSE event-stream。"""
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+
+    # ── 1. 读 session + 检索（同 /session/turn）──
+    sess_meta = await anyio.to_thread.run_sync(get_session_meta, req.session_id)
+    if sess_meta is None:
+        raise HTTPException(status_code=404, detail=f"session {req.session_id} not found")
+    if sess_meta["status"] != "active":
+        raise HTTPException(
+            status_code=409,
+            detail=f"session {req.session_id} is {sess_meta['status']}, not active",
+        )
+
+    mentor_id = sess_meta["mentor_id"]
+    user_id = sess_meta["user_id"]
+    history = await anyio.to_thread.run_sync(get_session_turns, req.session_id)
+
+    try:
+        q_emb = await anyio.to_thread.run_sync(embed_query, req.user_input)
+    except Exception as e:
+        logger.exception("embed_query failed")
+        raise HTTPException(status_code=502, detail=f"embed error: {e}") from e
+
+    kb_chunks = await anyio.to_thread.run_sync(
+        retrieve_mentor_kb, mentor_id, q_emb, req.top_k_concepts, req.top_k_voice, True,
+    )
+    user_memories = await anyio.to_thread.run_sync(
+        retrieve_user_memories, user_id, q_emb, None, 3, 0.1, 0.35,
+    )
+    if user_memories:
+        await anyio.to_thread.run_sync(
+            reinforce_memories, [m["memory_id"] for m in user_memories], 0.05,
+        )
+
+    semantic_profile = await anyio.to_thread.run_sync(get_user_semantic_profile, user_id)
+
+    last_summary_for_prompt = None
+    if sess_meta["turn_count"] == 0:
+        from .db import _conn as _db_conn  # noqa
+        with _db_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT summary FROM sessions
+                    WHERE user_id = %s AND mentor_id = %s
+                      AND status IN ('closed_by_user', 'closed_by_rollover')
+                      AND summary IS NOT NULL
+                    ORDER BY closed_at DESC NULLS LAST, last_active_at DESC
+                    LIMIT 1
+                    """,
+                    (user_id, mentor_id),
+                )
+                row = cur.fetchone()
+                last_summary_for_prompt = row[0] if row else None
+
+    sys_prompt = build_mentor_response_system_prompt(
+        mentor_id=mentor_id,
+        kb_chunks=kb_chunks,
+        last_closed_summary=last_summary_for_prompt,
+        session_turn_count=sess_meta["turn_count"],
+        user_memories=user_memories,
+        semantic_profile=semantic_profile,
+    )
+    msgs = build_mentor_response_messages(history, req.user_input)
+
+    # ── 2. 先 INSERT user turn（让数据可靠落库）──
+    user_turn_id = await anyio.to_thread.run_sync(
+        insert_turn, req.session_id, "user", req.user_input, None,
+    )
+
+    # ── 3. SSE 流式生成 + 累积全文 ──
+    def sse(event: str, data: dict) -> str:
+        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+    async def event_generator():
+        # 先发 meta（让前端立刻可以渲染"思考中"状态 + 检索调试）
+        yield sse("meta", {
+            "session_id": req.session_id,
+            "user_turn_id": user_turn_id,
+            "retrieval": {
+                "concepts": [c["title"] for c in kb_chunks["concepts"]],
+                "voice_examples": [c["title"] for c in kb_chunks["voice_examples"]],
+            },
+            "memories_recalled": [
+                {
+                    "memory_id": m["memory_id"],
+                    "source_quote": m.get("source_quote"),
+                    "memory_type": m["memory_type"],
+                    "days_ago": m["days_ago"],
+                    "salience": m["current_salience"],
+                    "similarity": m["similarity"],
+                }
+                for m in user_memories
+            ],
+        })
+
+        full_chunks: list[str] = []
+        try:
+            # 把同步生成器放到 thread pool 里运行，逐 yield 透传
+            async def pull_from_sync_gen():
+                gen = stream_mentor_response(sys_prompt, msgs, req.temperature, 600)
+                while True:
+                    delta = await anyio.to_thread.run_sync(lambda: next(gen, None))
+                    if delta is None:
+                        break
+                    yield delta
+
+            async for delta in pull_from_sync_gen():
+                full_chunks.append(delta)
+                yield sse("delta", {"text": delta})
+
+        except DeepSeekError as e:
+            yield sse("error", {"detail": f"DeepSeek error: {e}"})
+            return
+
+        mentor_text = "".join(full_chunks).strip()
+        if not mentor_text:
+            yield sse("error", {"detail": "empty response"})
+            return
+
+        # ── 4. 流完之后：INSERT mentor turn + 触发 background jobs ──
+        mentor_meta = {
+            "kb_concepts_used": [c["title"] for c in kb_chunks["concepts"]],
+            "kb_voice_used": [c["title"] for c in kb_chunks["voice_examples"]],
+            "had_cross_session_summary": last_summary_for_prompt is not None,
+            "memory_ids_recalled": [m["memory_id"] for m in user_memories],
+            "model": os.environ.get("DEEPSEEK_MODEL_MENTOR", "deepseek-chat"),
+        }
+        mentor_turn_id = await anyio.to_thread.run_sync(
+            insert_turn, req.session_id, "mentor", mentor_text, mentor_meta,
+        )
+
+        # 触发后台任务
+        new_user_turn_index = sess_meta["turn_count"] + 1
+        # 这两个跑在 thread 里就不会阻塞了——既然已经在 streaming response 内，触发即可
+        await anyio.to_thread.run_sync(score_and_persist_turn, user_turn_id, user_id, req.user_input)
+        if should_reevaluate_themes(new_user_turn_index):
+            await anyio.to_thread.run_sync(reevaluate_session_themes, req.session_id)
+
+        yield sse("done", {
+            "mentor_turn_id": mentor_turn_id,
+            "turn_count_after": sess_meta["turn_count"] + 2,
+        })
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 class SessionMarkClosedRequest(BaseModel):
