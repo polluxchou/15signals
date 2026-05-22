@@ -2,7 +2,7 @@
 # 部署后访问地址：https://<APP_NAME>.fly.dev
 # 默认 APP_NAME 是文件里的 app = "..."；可以改成你喜欢的名字（必须全局唯一）
 
-app = "signals-backend"
+app = "signals-backend-pollux"
 primary_region = "sjc"   # San Jose；改成离你/用户最近的：iad=美东、nrt=东京、hkg=香港、sin=新加坡
 
 [build]
