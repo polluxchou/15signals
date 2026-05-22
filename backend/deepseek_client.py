@@ -39,7 +39,7 @@ def get_model_mentor() -> str:
 def call_mentor_response(
     system_prompt: str,
     messages: list[dict],
-    temperature: float = 0.7,
+    temperature: float = 0.5,
     max_tokens: int = 600,
 ) -> str:
     """
