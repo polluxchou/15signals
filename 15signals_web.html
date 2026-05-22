@@ -124,6 +124,23 @@
     }
     .phil-card:hover { border-color: var(--ink); background: rgba(27,27,24,0.025); }
     .phil-card svg { width: 80px; height: 100px; margin-bottom: 16px; }
+    .phil-card img.phil-portrait {
+      width: 80px;
+      height: 100px;
+      margin-bottom: 16px;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+    img.phil-thumb {
+      width: 24px;
+      height: 30px;
+      object-fit: cover;
+      object-position: center top;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
     .phil-name {
       font-family: 'Playfair Display', serif;
       font-weight: 900;
@@ -2170,7 +2187,7 @@ async function go(nextId, dur = 500) {
 }
 
 function svgThumb(philKey) {
-  return `<svg viewBox="0 0 148 186" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:30px;flex-shrink:0">${SVG[philKey]}</svg>`;
+  return `<img class="phil-thumb" src="assets/portraits/${philKey}.png" alt="${philKey}">`;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2183,7 +2200,7 @@ const philCards = document.getElementById('philCards');
   card.className = 'phil-card';
   card.dataset.phil = key;
   card.innerHTML = `
-    <svg viewBox="0 0 148 186" xmlns="http://www.w3.org/2000/svg" style="width:80px;height:100px;margin-bottom:16px">${SVG[key]}</svg>
+    <img class="phil-portrait" src="assets/portraits/${key}.png" alt="${d.short}">
     <div class="phil-name">${d.short}</div>
     <div class="phil-years">${d.years}</div>
     <div class="phil-rule"></div>
