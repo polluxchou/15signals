@@ -1364,6 +1364,55 @@
     }
     .letter-meta .meta-sep { margin: 0 8px; opacity: 0.4; }
 
+    /* ── sceneSelect 顶部「今天你是」轻问行 ── */
+    .daily-role-row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px 14px;
+      margin: -16px 0 0;
+      font-family: 'EB Garamond', serif;
+      font-size: 12.5px;
+      color: var(--ink-faint);
+      letter-spacing: 0.04em;
+    }
+    .daily-role-q {
+      font-style: italic;
+    }
+    .daily-role-btn {
+      background: none;
+      border: none;
+      font-family: 'EB Garamond', serif;
+      font-size: 12.5px;
+      color: var(--ink-faint);
+      cursor: pointer;
+      padding: 4px 2px;
+      transition: color 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .daily-role-btn:hover { color: var(--ink); }
+    .daily-role-btn.active {
+      color: var(--ink);
+      border-bottom: 1px solid var(--ink);
+    }
+    .daily-role-sep {
+      opacity: 0.4;
+    }
+    .daily-role-skip {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-faint);
+      background: none; border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      margin-left: 6px;
+      opacity: 0.55;
+      transition: opacity 0.15s;
+    }
+    .daily-role-skip:hover { opacity: 1; }
+
     /* ── sceneSelect 上的"我的复盘"入口 ── */
     .select-history-link {
       margin-top: 32px;
@@ -1476,6 +1525,17 @@
     <div class="select-heading">
       <h2>今日导师</h2>
       <p>选择与你同行的思想者</p>
+    </div>
+    <div class="daily-role-row" id="dailyRoleRow">
+      <span class="daily-role-q">今天你是 ·</span>
+      <button class="daily-role-btn" data-role="whitecollar">上班</button>
+      <span class="daily-role-sep">/</span>
+      <button class="daily-role-btn" data-role="student">上学</button>
+      <span class="daily-role-sep">/</span>
+      <button class="daily-role-btn" data-role="freelance">自己安排</button>
+      <span class="daily-role-sep">/</span>
+      <button class="daily-role-btn" data-role="other">其他</button>
+      <button class="daily-role-skip" id="dailyRoleSkip">— 跳过</button>
     </div>
     <div class="phil-cards" id="philCards"></div>
     <button class="select-history-link" id="selectHistoryLink">— 看我的复盘记录</button>
@@ -1862,6 +1922,33 @@ const P = {
       '自主性丧失': '在传统社会，你的命运由出身决定；在现代社会，你被告知一切由你选择。\n\n但你真的在选择吗？还是只是在更隐蔽的轨道上完成更精致的服从？告诉我：你最近一次做出真正属于自己的选择，是什么时候？',
       default: '你今天带着什么来到这里？\n\n我有一个习惯：我总是先问，在这个问题背后，隐藏着一个怎样的价值判断。因为所有的问题，都不是价值中立的。'
     },
+    /* 每日生活情境前奏（Weber 全套 16 段；Freud / Marx 暂未填，自动降级为无前奏） */
+    preambles: {
+      whitecollar: {
+        pre_work:  '出发前的这一刻——你还没真正成为今天那个「职位」。',
+        at_work:   '会议与会议之间的一道缝。把这一段留给自己。',
+        post_work: '今天的角色卸下了。剩下的你，是什么样子？',
+        late:      '该睡的不睡——是身体醒着，还是脑子不肯松？'
+      },
+      student: {
+        route:        '路上的这段时间，本来该是你的。今天感觉如何？',
+        school:       '坐在教室的角落，或者哪个安静的拐角——这一刻你属于自己。',
+        post_school:  '放学之后，世界的要求暂时不那么响了。',
+        late_study:   '夜很深了，灯还亮着。明天的事和今天的疲惫之间，你站在哪一边？'
+      },
+      freelance: {
+        morning:  '今天的节奏由你定。但「由你定」本身，有时候也是一种重量。',
+        work:     '没有钟点替你画界限。你怎么知道自己在做正经事？',
+        evening:  '没有「下班」这个仪式，今天的结束如何被自己宣布？',
+        late:     '工作和生活的边界模糊的时候，疲惫也变得模糊。'
+      },
+      other: {
+        dawn:       '清晨的这段时间，世界还没要求你做什么。',
+        morning:    '上午的时间里，有什么浮现出来了？',
+        afternoon:  '下午的光不同于早晨。心境也是。',
+        evening:    '夜里的话，比白天的话深。今天有什么想说的？'
+      }
+    },
     R: {
       work: `你将这种投入称为热爱，也许是这样。但我想引入一个区分：职业（Beruf），在德语里同时意味着「工作」和「召唤」。这不是巧合。\n\n问题不是你是否足够努力，而是：这份工作对你而言，究竟是一种内在的使命感，还是仅仅是理性铁笼中的另一条轨道？理性化的社会要求我们高效，却不承诺我们意义。那意义，必须由你自己去找寻。`,
       meaning: `你所感受到的空洞，有其历史原因。我把这个过程称为「祛魅」——现代世界系统性地清除了曾经赋予生活意义的神圣框架：宗教、传统、共同体。\n\n科学与理性接管了一切，但它们只能回答「如何」，回答不了「为什么」。现代人必须独自建构意义——而这种建构，没有任何保证。面对这种处境，你打算如何回应？`,
@@ -1914,53 +2001,29 @@ const DS = {
   set key(v) { localStorage.setItem('ds_key', v); }
 };
 
-function buildSystemPrompt(philKey) {
-  const now = new Date();
-  const timeCtx = `现在是${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日，` +
-    `${['深夜','清晨','清晨','清晨','清晨','清晨','清晨','早上','早上','上午','上午','上午',
-       '中午','下午','下午','下午','下午','傍晚','傍晚','晚上','晚上','晚上','夜里','深夜'][now.getHours()]}。`;
+/* ── 前端 system prompt（最小化）─────────────────────────────
+   所有人设、回应规则、记忆注入、舞台描写约束的**唯一权威**
+   在 backend/prompts.py 的 build_mentor_response_system_prompt。
 
-  const shared = `\n\n时间感知：${timeCtx}你对此刻有感知——不必直接报时，但可以在合适时让"今天""此刻""这个时节"自然地渗入你的话语，让来访者感受到这次对话发生在真实的当下。`;
+   这里只保留一句最基础的语言级提示，不再重复任何规则——
+   避免前端的旧指令稀释或冲突后端正在打磨的对话风格。
 
-  const prompts = {
-    freud: `你是西格蒙德·弗洛伊德（Sigmund Freud，1856–1939），精神分析学的创始人。你正在与一位用中文交谈的来访者进行私人会谈。
-
-回应要求：
-- 全程用中文，语言精炼、深邃、带有分析师的克制
-- 从精神分析视角解读（潜意识、欲望、防御机制、移情、早期经历）
-- 不急于给答案，而是揭示表面之下的隐藏动力
-- 每次回应 120–200 字，分 1–2 段
-- 以一个深入的反问或观察结尾，引导更深的自我探索
-- 语气：沉静、洞察、略带距离感，不表演，就是你自己
-
-你不是在扮演弗洛伊德，你就是弗洛伊德，这是一次真实的会谈。`,
-
-    weber: `你是马克斯·韦伯（Max Weber，1864–1920），社会学家与政治经济学家。你正在与一位用中文交谈的人进行思想对话。
-
-回应要求：
-- 全程用中文，语言严谨、清醒、带有历史感的厚重
-- 将个体处境置于更大的社会与历史结构中分析（理性化、祛魅、Beruf、铁笼、意义危机）
-- 不提供廉价安慰，帮助对方看清处境的本质
-- 每次回应 120–200 字，分 1–2 段
-- 以一个让对方审视自身价值取向的问题结尾
-- 语气：学术而悲悯，带着一种清醒的忧郁
-
-你不是在扮演韦伯，你就是韦伯，这是一次真实的思想对话。`,
-
-    marx: `你是卡尔·马克思（Karl Marx，1818–1883），哲学家、经济学家、革命理论家。你正在与一位用中文交谈的人进行对话。
-
-回应要求：
-- 全程用中文，语言有力、深刻、带有批判的锋芒
-- 将个人苦痛与更广泛的社会矛盾联系（异化、劳动、物质条件、阶级意识、意识形态）
-- 批判指向结构，而非个人
-- 每次回应 120–200 字，分 1–2 段
-- 以一个让对方重新审视自身物质处境的问题结尾
-- 语气：充满激情但保持分析清醒，既有同情又有洞察
-
-你不是在扮演马克思，你就是马克思，这是一次真实的对话。`
-  };
-
-  return prompts[philKey] + shared;
+   philKey 参数保留是为了向后兼容 callDeepSeek 现有签名，
+   实际不再被使用。日后若 callDeepSeek 完全省略 system message，
+   可以连这个函数一起删。
+─────────────────────────────────────────────────────────── */
+function buildSystemPrompt(/* philKey */) {
+  // 注入今日 role + 当前 bucket 给 LLM 做生活情境感知（不强制复述标签）
+  const role = getDailyRole();
+  const bucket = currentBucket(role);
+  let contextHint = '';
+  if (role && bucket) {
+    const roleLabel = ROLE_LABELS[role] || role;
+    contextHint =
+      `\n\n生活情境（用户今天告诉你的）：他/她正处于「${roleLabel} · ${bucket.label}」的状态里。\n`
+      + `回应时可以自然地呼应这个情境（例如时间点、身体状态、环境），但**不要直接复述这个标签**。`;
+  }
+  return '用中文回应。' + contextHint;
 }
 
 // 对话历史持久化
@@ -2085,6 +2148,10 @@ function pause(ms) { return new Promise(r => setTimeout(r, ms)); }
 function css(n, p) { Object.assign(n.style, p); }
 
 async function go(nextId, dur = 500) {
+  // 跨日 / 跨进入 sceneSelect 时刷新「今天你是」按钮的 active 高亮
+  if (nextId === 'sceneSelect' && typeof renderDailyRoleRow === 'function') {
+    renderDailyRoleRow();
+  }
   const inn = scenes[nextId];
   const out = curScene ? scenes[curScene] : null;
   if (out) {
@@ -2125,6 +2192,117 @@ const philCards = document.getElementById('philCards');
   card.addEventListener('click', () => startSession(key));
   philCards.appendChild(card);
 });
+
+/* ══════════════════════════════════════════════════════
+   DAILY ROLE × LIFE BUCKET
+   ──────────────────────────────────────────────
+   每天首次打开 sceneSelect 时轻问一次「今天你是·上班/上学/自己安排/其他」，
+   缓存当天选择；根据用户本地时区时段算出当前 life-context bucket。
+   开场时把对应的 mentor preamble 拼在 signal greeting 前面，LLM system prompt
+   也拿到 role + bucket 字符串，对话中可自然延续。
+══════════════════════════════════════════════════════ */
+
+// 4 个角色 × 各自的 4 个时段。区间用整数小时（左闭右开），跨午夜的段用 wrap 标记。
+const ROLE_BUCKETS = {
+  whitecollar: [
+    { id: 'pre_work',  label: '上班前',     start: 5,  end: 9  },
+    { id: 'at_work',   label: '上班中',     start: 9,  end: 18 },
+    { id: 'post_work', label: '下班后',     start: 18, end: 23 },
+    { id: 'late',      label: '深夜',       wrap: true, start: 23, end: 5 },
+  ],
+  student: [
+    { id: 'route',       label: '上学路上',     start: 6,  end: 8  },
+    { id: 'school',      label: '校园中',       start: 8,  end: 17 },
+    { id: 'post_school', label: '放学后',       start: 17, end: 21 },
+    { id: 'late_study',  label: '夜自习/失眠', wrap: true, start: 21, end: 6 },
+  ],
+  freelance: [
+    { id: 'morning', label: '早晨',     start: 6,  end: 10 },
+    { id: 'work',    label: '工作时段', start: 10, end: 18 },
+    { id: 'evening', label: '傍晚',     start: 18, end: 22 },
+    { id: 'late',    label: '深夜',     wrap: true, start: 22, end: 6 },
+  ],
+  other: [
+    { id: 'dawn',      label: '清晨', start: 5,  end: 9  },
+    { id: 'morning',   label: '上午', start: 9,  end: 12 },
+    { id: 'afternoon', label: '下午', start: 12, end: 18 },
+    { id: 'evening',   label: '夜里', wrap: true, start: 18, end: 5 },
+  ],
+};
+
+const ROLE_LABELS = {
+  whitecollar: '上班',
+  student:     '上学',
+  freelance:   '自己安排',
+  other:       '其他',
+};
+
+function todayDateKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/** 返回 'whitecollar' | 'student' | 'freelance' | 'other' | null（null = 今天还没选或跳过了） */
+function getDailyRole() {
+  const date = localStorage.getItem('daily_role_date');
+  if (date !== todayDateKey()) return null;
+  const role = localStorage.getItem('daily_role');
+  return role || null;
+}
+
+function setDailyRole(role /* string | null */) {
+  if (role) localStorage.setItem('daily_role', role);
+  else      localStorage.removeItem('daily_role');
+  localStorage.setItem('daily_role_date', todayDateKey());
+}
+
+/** 当前 bucket 信息 {id, label} 或 null。role 未知则返回 null。 */
+function currentBucket(role) {
+  if (!role || !ROLE_BUCKETS[role]) return null;
+  const h = new Date().getHours();
+  for (const b of ROLE_BUCKETS[role]) {
+    if (b.wrap) {
+      if (h >= b.start || h < b.end) return { id: b.id, label: b.label };
+    } else if (h >= b.start && h < b.end) {
+      return { id: b.id, label: b.label };
+    }
+  }
+  return null;
+}
+
+/** mentor + role + bucket → 短句（Weber 已全填；Freud / Marx 暂未填则返回 null，平稳降级。） */
+function getPreamble(philKey, role, bucketId) {
+  if (!role || !bucketId) return null;
+  const p = P[philKey] && P[philKey].preambles;
+  if (!p || !p[role] || !p[role][bucketId]) return null;
+  return p[role][bucketId];
+}
+
+/* ── sceneSelect 顶部「今天你是」按钮组渲染 + 交互 ── */
+function renderDailyRoleRow() {
+  const row = document.getElementById('dailyRoleRow');
+  if (!row) return;
+  const current = getDailyRole();
+  row.querySelectorAll('.daily-role-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.role === current);
+  });
+}
+
+document.querySelectorAll('#dailyRoleRow .daily-role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setDailyRole(btn.dataset.role);
+    renderDailyRoleRow();
+  });
+});
+
+document.getElementById('dailyRoleSkip').addEventListener('click', () => {
+  // 跳过 = 标记今天已问过（不再追问）+ 清空选择
+  setDailyRole(null);
+  renderDailyRoleRow();
+});
+
+// 初始化一次（页面进入 sceneSelect 时会再刷一次以反映跨日切换）
+renderDailyRoleRow();
 
 /* ══════════════════════════════════════════════════════
    START SESSION
@@ -2186,7 +2364,14 @@ async function startSession(philKey) {
   // —— 接下来仍然走原有的"哲学家迎接"——以便保留产品本来的诗意
   //     （后续可考虑让哲学家在 greeting 里呼应用户写下的联想）
   const sig = (d.signals[Math.floor(Math.random() * d.signals.length)]);
-  const greet = d.greetings[sig] || d.greetings.default;
+  const baseGreet = d.greetings[sig] || d.greetings.default;
+
+  // —— 在 signal greeting 前拼一段「生活情境前奏」（按今日 role × 当前 bucket）
+  //    Weber 已全套；Freud/Marx 还没填则降级为无前奏，体验不破。
+  const role = getDailyRole();
+  const bucket = currentBucket(role);
+  const preamble = bucket && getPreamble(philKey, role, bucket.id);
+  const greet = preamble ? `${preamble}\n\n${baseGreet}` : baseGreet;
   lastRespText = greet;
 
   document.getElementById('greetText').textContent = greet;
