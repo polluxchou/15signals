@@ -437,6 +437,21 @@
       align-self: flex-start;
     }
     .resp-more-hint:hover { color: var(--ink); }
+    /* 箭头独立点头——只动 ↓，"还有更多"四个字保持不动
+       节奏：60% 时间静止，后 40% 缓缓下沉再回归，整体像呼吸而不是催促 */
+    .resp-more-hint .more-arrow {
+      display: inline-block;
+      margin-right: 4px;
+      animation: moreNudge 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    /* 用户已经注意到（hover）就不再点头，避免重复催 */
+    .resp-more-hint:hover .more-arrow {
+      animation-play-state: paused;
+    }
+    @keyframes moreNudge {
+      0%, 60%, 100% { transform: translateY(0); }
+      80%           { transform: translateY(3px); }
+    }
     .reply-btn {
       margin-top: 36px;
       background: none; border: none;
@@ -1613,7 +1628,7 @@
   <div class="dialogue-col">
     <div class="attr-row" id="respAttr"></div>
     <p class="resp-text" id="respText"></p>
-    <button class="resp-more-hint" id="respMoreHint">— 还有更多</button>
+    <button class="resp-more-hint" id="respMoreHint"><span class="more-arrow">↓</span> 还有更多</button>
     <button class="reply-btn" id="replyBtn">— 继续提问</button>
     <button class="end-btn" id="endBtn">— 结束这段对话，做一次复盘</button>
   </div>
