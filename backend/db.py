@@ -344,6 +344,201 @@ def get_user_semantic_profile(user_id: int) -> dict | None:
             }
 
 
+# ─────────────────────────────────────────────────────────
+# P2 (前端接入) · 列表 / 历史 / 导入
+# ─────────────────────────────────────────────────────────
+
+def list_user_sessions(user_id: int, limit: int = 500) -> list[dict]:
+    """列出该用户所有 session，按 last_active_at 降序。
+
+    返回 summary_pretty（标题字符串）便于前端列表渲染，不返回完整 summary（前端按需拉）。
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    id, mentor_id, started_at, last_active_at,
+                    status, turn_count,
+                    summary IS NOT NULL AS has_summary,
+                    summary->>'title' AS summary_title,
+                    summary->>'emotional_summary' AS summary_emo
+                FROM sessions
+                WHERE user_id = %s
+                ORDER BY last_active_at DESC
+                LIMIT %s
+                """,
+                (user_id, limit),
+            )
+            return [
+                {
+                    "id": r[0],
+                    "mentor_id": r[1],
+                    "started_at": r[2].isoformat() if r[2] else None,
+                    "last_active_at": r[3].isoformat() if r[3] else None,
+                    "status": r[4],
+                    "turn_count": r[5],
+                    "has_summary": r[6],
+                    # summary_pretty: 前端列表的一行字
+                    "summary_pretty": r[7] or (r[8][:80] if r[8] else None),
+                }
+                for r in cur.fetchall()
+            ]
+
+
+def get_session_with_turns(session_id: int, user_id: int | None = None) -> dict | None:
+    """读 session 元数据 + 所有 turns。
+
+    user_id 提供时校验所有权（防越权）。
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, user_id, mentor_id, started_at, last_active_at,
+                       status, turn_count, summary, current_themes
+                FROM sessions WHERE id = %s
+                """,
+                (session_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            session = {
+                "id": row[0],
+                "user_id": row[1],
+                "mentor_id": row[2],
+                "started_at": row[3].isoformat() if row[3] else None,
+                "last_active_at": row[4].isoformat() if row[4] else None,
+                "status": row[5],
+                "turn_count": row[6],
+                "summary": row[7],
+                "current_themes": row[8],
+            }
+            if user_id is not None and session["user_id"] != user_id:
+                return None  # 不属于该用户
+
+            cur.execute(
+                """
+                SELECT id, turn_index, role, content, created_at
+                FROM turns WHERE session_id = %s ORDER BY turn_index ASC
+                """,
+                (session_id,),
+            )
+            turns = [
+                {
+                    "id": r[0],
+                    "turn_index": r[1],
+                    "role": r[2],
+                    "content": r[3],
+                    "created_at": r[4].isoformat() if r[4] else None,
+                }
+                for r in cur.fetchall()
+            ]
+            return {"session": session, "turns": turns}
+
+
+def import_user_sessions(user_id: int, sessions: list[dict]) -> dict:
+    """批量导入历史 session（来自 localStorage 等本地缓存）。
+
+    每个 session 形如：
+      {
+        mentor_id, started_at, last_active_at, closed_at,
+        summary?,   # dict 或 null
+        turns: [{role: 'user'|'mentor', content}, ...]
+      }
+
+    幂等策略：
+      - 用 (user_id, mentor_id, started_at) 做去重 key
+      - 已存在的 (user, mentor, started_at) 跳过
+
+    Returns: {imported, skipped, error}
+    """
+    stats = {"imported": 0, "skipped": 0, "errors": 0, "session_ids": []}
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            for s in sessions:
+                try:
+                    mentor_id = s.get("mentor_id")
+                    started_at = s.get("started_at")
+                    if not mentor_id or not started_at:
+                        stats["errors"] += 1
+                        continue
+
+                    # 去重：同 user + mentor + started_at 的 session 已存在则跳过
+                    cur.execute(
+                        """
+                        SELECT id FROM sessions
+                        WHERE user_id = %s AND mentor_id = %s AND started_at = %s
+                        """,
+                        (user_id, mentor_id, started_at),
+                    )
+                    if cur.fetchone():
+                        stats["skipped"] += 1
+                        continue
+
+                    turns = s.get("turns") or []
+                    if len(turns) < 1:
+                        stats["skipped"] += 1
+                        continue
+
+                    summary = s.get("summary")
+                    closed_at = s.get("closed_at") or s.get("last_active_at") or started_at
+                    last_active_at = s.get("last_active_at") or closed_at
+                    has_summary = bool(summary)
+                    status = "closed_by_user" if has_summary or closed_at else "active"
+
+                    # 插入 session
+                    cur.execute(
+                        """
+                        INSERT INTO sessions (
+                            user_id, mentor_id, started_at, last_active_at, status,
+                            closed_at, summary, summary_generated_at, turn_count
+                        ) VALUES (
+                            %s, %s, %s, %s, %s,
+                            %s, %s::jsonb, %s, %s
+                        )
+                        RETURNING id
+                        """,
+                        (
+                            user_id, mentor_id, started_at, last_active_at, status,
+                            closed_at if has_summary else None,
+                            json.dumps(summary, ensure_ascii=False) if has_summary else None,
+                            closed_at if has_summary else None,
+                            len(turns),
+                        ),
+                    )
+                    new_sid = cur.fetchone()[0]
+
+                    # 插入 turns
+                    for i, t in enumerate(turns, 1):
+                        role = t.get("role")
+                        if role == "assistant":
+                            role = "mentor"
+                        if role not in ("user", "mentor"):
+                            continue
+                        content = (t.get("content") or "").strip()
+                        if not content:
+                            continue
+                        cur.execute(
+                            """
+                            INSERT INTO turns (session_id, turn_index, role, content)
+                            VALUES (%s, %s, %s, %s)
+                            """,
+                            (new_sid, i, role, content),
+                        )
+
+                    stats["imported"] += 1
+                    stats["session_ids"].append(new_sid)
+                except Exception as e:
+                    logger.warning("import session failed: %s | data=%r", e, s)
+                    stats["errors"] += 1
+            conn.commit()
+
+    return stats
+
+
 def mark_session_closed(session_id: int, reason: str = "closed_by_user") -> None:
     """手动关闭 session（用户主动 /end 或 rollover）。
 
