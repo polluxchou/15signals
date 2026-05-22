@@ -20,6 +20,12 @@ venv/
 # Claude Code 本地会话状态（含历史记录、内存文件、用户路径）
 .claude/
 
+# 其他本地工具/会话状态
+.superpowers/
+
+# 临时验证用 venv（agent 跑 import 检查时建出来）
+.verify-venv/
+
 # 系统
 .DS_Store
 Thumbs.db
