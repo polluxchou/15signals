@@ -496,6 +496,90 @@
     }
     .key-btn:hover { color: var(--ink); }
 
+    /* ── 背景音乐切换：右下角的 MUJI 风 CD 机 ──
+       播放时光盘缓慢匀速旋转（≈9 秒一圈）；
+       点击停止时不立即冻结，靠 transform + cubic-bezier
+       在 ~2.6 秒内继续多滑行约 120°，像真实 CD 机断电后惯性收尾。 */
+    .bgm-toggle {
+      position: fixed;
+      left: 24px;
+      bottom: 22px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 20;
+      opacity: 0.55;
+      transition: opacity 0.35s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bgm-toggle:hover      { opacity: 0.95; }
+    .bgm-toggle.is-playing { opacity: 1;    }
+
+    .bgm-disc {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      /* 光盘本体：极淡的灰，配上一圈圈极细的"音轨"纹理 */
+      background:
+        repeating-radial-gradient(circle at 50% 50%,
+          rgba(92,92,82,0)    0px,
+          rgba(92,92,82,0)    2.4px,
+          rgba(92,92,82,0.07) 2.4px,
+          rgba(92,92,82,0.07) 2.9px),
+        radial-gradient(circle at 38% 38%,
+          rgba(255,255,255,0.45) 0%,
+          rgba(255,255,255,0)    55%),
+        rgba(92,92,82,0.05);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(27,27,24,0.04);
+      transform: rotate(0deg);
+      will-change: transform;
+    }
+    /* 中心轴孔：一个奶油色小圆，外面一圈深一点的描边 */
+    .bgm-disc::before {
+      content: '';
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 9px; height: 9px;
+      margin: -4.5px 0 0 -4.5px;
+      border-radius: 50%;
+      background: var(--cream);
+      border: 1px solid var(--ink-light);
+      box-sizing: border-box;
+    }
+    /* 一道极细的高光斜线，让光盘旋转时更能被眼睛追踪 */
+    .bgm-disc::after {
+      content: '';
+      position: absolute;
+      left: 14%; top: 50%;
+      width: 72%;
+      height: 1px;
+      background: linear-gradient(to right,
+        rgba(92,92,82,0) 0%,
+        rgba(92,92,82,0.22) 50%,
+        rgba(92,92,82,0) 100%);
+      transform: rotate(28deg);
+      transform-origin: center;
+      pointer-events: none;
+    }
+    /* 匀速旋转（由 JS 控制启停，停止时改用过渡缓出做惯性收尾） */
+    .bgm-disc.is-spinning {
+      animation: cdSpin 9s linear infinite;
+    }
+    @keyframes cdSpin {
+      from { transform: rotate(0deg);   }
+      to   { transform: rotate(360deg); }
+    }
+    @media (max-width: 600px) {
+      .bgm-toggle { left: 14px; bottom: 14px; width: 38px; height: 38px; }
+      .bgm-disc::before { width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+    }
+
     .user-email {
       font-family: 'EB Garamond', serif;
       font-size: 11px;
@@ -1524,6 +1608,12 @@
   </div>
 </div>
 
+<!-- 背景音乐：humming loop，默认静音，首次进入会在第一次交互时尝试启动 -->
+<audio id="bgmAudio" loop preload="auto" src="BGM/Breathy_10_mono.m4a"></audio>
+<button class="bgm-toggle" id="bgmToggle" type="button" aria-label="背景音乐开关" title="背景音乐">
+  <span class="bgm-disc" id="bgmDisc"></span>
+</button>
+
 <!-- API Key Modal -->
 <div id="keyModal" style="display:none;position:fixed;inset:0;background:rgba(246,243,236,0.96);z-index:100;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px">
   <p style="font-family:'EB Garamond',serif;font-size:13px;letter-spacing:0.12em;color:var(--ink-light)">输入你的 DeepSeek API Key</p>
@@ -2547,27 +2637,38 @@ async function startSession(philKey) {
   // —— 等用户写下今日联想并长按沉入。期间没有任何自动推进。
   const association = await waitForDailySubmit();
   if (association === null) return;   // 用户在 daily 场景按了返回，本次 session 结束
-  // association 已存进 lastDailyAssociation，可在后续 LLM 调用里复用
 
-  // —— 接下来仍然走原有的"哲学家迎接"——以便保留产品本来的诗意
-  //     （后续可考虑让哲学家在 greeting 里呼应用户写下的联想）
-  const sig = (d.signals[Math.floor(Math.random() * d.signals.length)]);
-  const baseGreet = d.greetings[sig] || d.greetings.default;
-
-  // —— 在 signal greeting 前拼一段「生活情境前奏」（按今日 role × 当前 bucket）
-  //    Weber 已全套；Freud/Marx 还没填则降级为无前奏，体验不破。
-  const role = getDailyRole();
-  const bucket = currentBucket(role);
-  const preamble = bucket && getPreamble(philKey, role, bucket.id);
-  const greet = preamble ? `${preamble}\n\n${baseGreet}` : baseGreet;
-  lastRespText = greet;
-
-  document.getElementById('greetText').textContent = greet;
+  // —— 把"图联想"当作今日对话的**第一句**——让导师真正"看见"用户写的内容，
+  //     而不是接着说一段预设独白。
+  //     做法：调 /api/session/turn/stream，让 LLM 基于 association（+ KB + 记忆）
+  //     流式生成"迎接语"，逐字浮现在 sceneGreeting 的 greetText 里。
   document.getElementById('greetAttr').innerHTML =
     `${svgThumb(philKey)}<span class="attr-name">${d.short}</span>`;
+  const greetEl = document.getElementById('greetText');
+  greetEl.textContent = '';   // 空白起步，等流式 delta 填进来
 
   await go('sceneGreeting', 580);
-  await pause(1000);
+
+  // 流式生成导师对图联想的真实回应
+  try {
+    await callDeepSeek(association, philKey, (fullSoFar /*, delta, meta */) => {
+      greetEl.textContent = fullSoFar;
+    });
+    lastRespText = greetEl.textContent.trim();
+  } catch (err) {
+    // 后端失败时降级到旧的预设迎接语，体验不破
+    console.warn('[startSession] streaming greeting failed, falling back to preset', err);
+    const sig = (d.signals[Math.floor(Math.random() * d.signals.length)]);
+    const baseGreet = d.greetings[sig] || d.greetings.default;
+    const role = getDailyRole();
+    const bucket = currentBucket(role);
+    const preamble = bucket && getPreamble(philKey, role, bucket.id);
+    const fallback = preamble ? `${preamble}\n\n${baseGreet}` : baseGreet;
+    greetEl.textContent = fallback;
+    lastRespText = fallback;
+  }
+
+  await pause(600);
   document.getElementById('startBtn').style.opacity = '1';
 }
 
@@ -3890,6 +3991,97 @@ supa.auth.onAuthStateChange((event, session) => {
     console.error('[auth] bootstrap failed', err);
     await go('sceneAuth', 0);
     showAuthError('未能连接到 Supabase，请检查页面顶部的 SUPA_URL / SUPA_ANON_KEY 配置');
+  }
+})();
+
+/* ── 背景音乐：humming loop ──
+   - 默认静音；点击开启后偏好写入 localStorage
+   - 浏览器禁止无交互自动播放，所以即便偏好为开，也会等待首次交互
+   - 音量保守 (0.32)，避免压住对话氛围
+   - 视觉：光盘匀速旋转 9 秒一圈；点停时不冻结，
+     通过读取当前 transform 角度 + cubic-bezier 缓出
+     再滑行 ~120° 后停下，模拟 MUJI CD 机断电后的惯性收尾。 */
+(function initBGM() {
+  const audio = document.getElementById('bgmAudio');
+  const btn   = document.getElementById('bgmToggle');
+  const disc  = document.getElementById('bgmDisc');
+  if (!audio || !btn || !disc) return;
+
+  const KEY = '15s.bgm.on';
+  audio.volume = 0.32;
+
+  function currentDiscAngle() {
+    const t = getComputedStyle(disc).transform;
+    if (!t || t === 'none') return 0;
+    const m = new DOMMatrixReadOnly(t);
+    return Math.atan2(m.b, m.a) * 180 / Math.PI;
+  }
+
+  function startSpin() {
+    // 清掉惯性收尾留下的 inline 样式，回到 CSS 动画接管
+    disc.style.transition = '';
+    disc.style.transform  = '';
+    // 强制重排，防止上一个 transition 还在生效时叠加冲突
+    void disc.offsetWidth;
+    disc.classList.add('is-spinning');
+  }
+
+  function stopSpinSmoothly() {
+    const angle = currentDiscAngle();
+    // 先把动画停掉，把当前角度固化为 inline transform
+    disc.classList.remove('is-spinning');
+    disc.style.transition = 'none';
+    disc.style.transform  = `rotate(${angle}deg)`;
+    // 强制重排，让浏览器认下这个起点
+    void disc.offsetWidth;
+    // 再施加缓出过渡，让光盘多滑行约 120° 后静止
+    disc.style.transition = 'transform 2.6s cubic-bezier(0.15, 0.62, 0.18, 1)';
+    disc.style.transform  = `rotate(${angle + 120}deg)`;
+  }
+
+  function tryPlay() {
+    return audio.play().then(() => {
+      btn.classList.add('is-playing');
+      startSpin();
+      localStorage.setItem(KEY, '1');
+      return true;
+    }).catch((err) => {
+      console.warn('[bgm] play() rejected:', err && err.name, err && err.message);
+      return false;
+    });
+  }
+  audio.addEventListener('error', () => {
+    const e = audio.error;
+    console.warn('[bgm] audio element error:',
+      e ? `code=${e.code} message=${e.message}` : '(no error object)',
+      'src=', audio.currentSrc || audio.src);
+  });
+  audio.addEventListener('canplay',     () => console.info('[bgm] canplay'));
+  audio.addEventListener('loadedmetadata', () => console.info('[bgm] loadedmetadata, duration=', audio.duration));
+  function pause() {
+    audio.pause();
+    btn.classList.remove('is-playing');
+    stopSpinSmoothly();
+    localStorage.setItem(KEY, '0');
+  }
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (audio.paused) tryPlay(); else pause();
+  });
+
+  // 恢复上次偏好；自动播放被拦截时，等首次任意交互再试一次
+  if (localStorage.getItem(KEY) === '1') {
+    tryPlay().then((ok) => {
+      if (ok) return;
+      const onFirst = () => {
+        tryPlay();
+        document.removeEventListener('pointerdown', onFirst);
+        document.removeEventListener('keydown', onFirst);
+      };
+      document.addEventListener('pointerdown', onFirst, { once: true });
+      document.addEventListener('keydown',     onFirst, { once: true });
+    });
   }
 })();
 </script>
