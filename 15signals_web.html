@@ -1219,7 +1219,7 @@
     }
     .cal-day {
       position: relative;
-      aspect-ratio: 1;
+      height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1228,7 +1228,7 @@
       color: var(--ink-faint);
       cursor: default;
       transition: color 0.15s, background 0.15s;
-      border-radius: 50%;
+      border-radius: 17px;
       user-select: none;
     }
     .cal-day.in-month { color: var(--ink); }
@@ -3175,6 +3175,11 @@ function renderCalendar() {
       }
       renderCalendar();
       renderDayLetters();
+      // 矮屏兜底：把当天的信笺平滑滚到视野中央
+      const daySection = document.querySelector('#sceneHistory .day-section');
+      if (daySection) {
+        daySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     });
   });
 }
