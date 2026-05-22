@@ -2118,17 +2118,53 @@ function clearHistory(philKey) {
   localStorage.removeItem(`conv_${philKey}`);
 }
 
-/* ── 远端 API 辅助 ── */
+/* ── 远端 API 辅助 ─────────────────────────────────────────
+   BACKEND_BASE 配置：
+     - 本地 (file:// / localhost / 127.0.0.1) → 直连 FastAPI @ 3459
+     - 部署后 → 同源 /api/*（由 Vercel rewrite 代理到 backend）
+   user_email 注入：
+     - 后端 /api/session/* 系列端点需要 user_email 定位 user_id
+     - 这里从 Supabase auth session 自动取，调用方不用每次传
+─────────────────────────────────────────────────────────── */
+const BACKEND_BASE = (() => {
+  const isLocal = location.hostname === 'localhost'
+               || location.hostname === '127.0.0.1'
+               || location.protocol === 'file:'
+               || location.hostname === '';
+  return isLocal ? 'http://127.0.0.1:3459' : '';
+})();
+
+function resolveApiUrl(path) {
+  if (path.startsWith('/api/') || path.startsWith('/session/')) {
+    return BACKEND_BASE + path;
+  }
+  return path;
+}
+
 async function authHeader() {
   const { data: { session } } = await supa.auth.getSession();
   if (!session) return null;
   return { 'Authorization': `Bearer ${session.access_token}` };
 }
 
+async function getCurrentUserEmail() {
+  try {
+    const { data: { user } } = await supa.auth.getUser();
+    return user?.email || null;
+  } catch {
+    return null;
+  }
+}
+
 async function apiPost(path, body) {
   const auth = await authHeader();
   if (!auth) throw new Error('NOT_SIGNED_IN');
-  const res = await fetch(path, {
+  // 自动注入 user_email（除非调用方已显式提供）
+  const email = await getCurrentUserEmail();
+  if (email && body && typeof body === 'object' && !('user_email' in body)) {
+    body = { ...body, user_email: email };
+  }
+  const res = await fetch(resolveApiUrl(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...auth },
     body: JSON.stringify(body)
@@ -2143,7 +2179,13 @@ async function apiPost(path, body) {
 async function apiGet(path) {
   const auth = await authHeader();
   if (!auth) throw new Error('NOT_SIGNED_IN');
-  const res = await fetch(path, { headers: auth });
+  // 自动在 query 注入 user_email
+  const email = await getCurrentUserEmail();
+  let resolvedPath = path;
+  if (email && !path.includes('user_email=')) {
+    resolvedPath = path + (path.includes('?') ? '&' : '?') + 'user_email=' + encodeURIComponent(email);
+  }
+  const res = await fetch(resolveApiUrl(resolvedPath), { headers: auth });
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`GET ${path} ${res.status}: ${txt}`);
@@ -2155,43 +2197,95 @@ async function apiGet(path) {
 const roleToServer  = r => (r === 'assistant' ? 'mentor' : r);
 const roleFromServer = r => (r === 'mentor' ? 'assistant' : r);
 
-async function callDeepSeek(userMsg, philKey) {
-  // 拿 Supabase 当前用户的 access_token，由 /api/deepseek 校验后再转发到上游
-  const { data: { session } } = await supa.auth.getSession();
-  if (!session) throw new Error('NOT_SIGNED_IN');
-
-  const messages = [
-    { role: 'system', content: buildSystemPrompt(philKey) },
-    ...convHistory,
-    { role: 'user', content: userMsg }
-  ];
-  const res = await fetch(DS.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`
-    },
-    body: JSON.stringify({ model: DS.model, messages, max_tokens: 400, temperature: 0.85 })
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  const data = await res.json();
-  const reply = data.choices[0].message.content.trim();
-  convHistory.push({ role: 'user', content: userMsg }, { role: 'assistant', content: reply });
-  saveHistory(philKey, convHistory);
-
-  // 远端：把这一对 turn 写到 sessions/turns（best-effort，不阻塞 UX）
-  if (currentSessionId) {
-    apiPost('/api/session/turn', {
-      session_id: currentSessionId,
-      turns: [
-        { role: 'user',   content: userMsg },
-        { role: 'mentor', content: reply   },
-      ]
-    }).catch(err => {
-      console.warn('[session/turn] 远端写入失败，本地缓存仍保留', err);
-    });
+// ────────────────────────────────────────────────────────────────────────
+// callDeepSeek (v2)：走 backend 的 /session/turn/stream。
+//
+// 后端职责（不再由前端处理）：
+//   - 拼 system prompt（KB / 记忆 / profile / forbidden_moves 全在 backend）
+//   - 调 DeepSeek
+//   - 持久化 user turn + mentor turn
+//   - 异步信号评分 + current_themes 重评
+//
+// 前端职责：
+//   - 把流式 delta 累积成全文，并通过 onProgress 回调让 UI 渐进显示（可选）
+//   - 把最终全文加进 convHistory + localStorage 缓存（离线兜底）
+//
+// 兼容性：signature `(userMsg, philKey)` 保留；旧调用点（不传 onProgress）
+// 直接拿到全文，行为等价于"一次性出回应"。要打字效果传一个回调即可。
+// ────────────────────────────────────────────────────────────────────────
+async function callDeepSeek(userMsg, philKey, onProgress) {
+  if (!currentSessionId) {
+    throw new Error('NO_SESSION');
   }
 
+  const auth = await authHeader();
+  if (!auth) throw new Error('NOT_SIGNED_IN');
+
+  const res = await fetch(resolveApiUrl('/api/session/turn/stream'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({
+      session_id: currentSessionId,
+      user_input: userMsg,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`stream ${res.status}: ${txt.slice(0, 200)}`);
+  }
+
+  // ── SSE 解析 ──
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  let full = '';
+  let lastMeta = null;
+  let streamError = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n\n')) !== -1) {
+      const raw = buf.slice(0, nl);
+      buf = buf.slice(nl + 2);
+      let evt = '', data = '';
+      for (const line of raw.split('\n')) {
+        if (line.startsWith('event:')) evt = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (!evt) continue;
+      let parsed = null;
+      try { parsed = JSON.parse(data); } catch {}
+      if (evt === 'meta') {
+        lastMeta = parsed;
+      } else if (evt === 'delta') {
+        const t = parsed?.text || '';
+        full += t;
+        if (typeof onProgress === 'function') {
+          try { onProgress(full, t, lastMeta); } catch (e) { console.warn('onProgress', e); }
+        }
+      } else if (evt === 'done') {
+        // 完成事件：parsed 含 mentor_turn_id / turn_count_after
+      } else if (evt === 'error') {
+        streamError = parsed?.detail || 'unknown stream error';
+      }
+    }
+  }
+
+  if (streamError) throw new Error('STREAM_ERROR: ' + streamError);
+  const reply = full.trim();
+  if (!reply) throw new Error('EMPTY_REPLY');
+
+  // 本地缓存同步——backend 已经持久化，这里只是离线兜底
+  convHistory.push(
+    { role: 'user', content: userMsg },
+    { role: 'assistant', content: reply },
+  );
+  saveHistory(philKey, convHistory);
+
+  // 不再单独调 /api/session/turn 持久化——backend 在流式里已经写好
   return reply;
 }
 
@@ -2386,21 +2480,29 @@ async function startSession(philKey) {
   // 1) 默认先用本地缓存填 convHistory，确保即便后端失联也能起步
   convHistory = loadHistory(philKey);
 
-  // 2) 远端：拿 / 建一段活跃会话，并用它的 turns 覆盖本地缓存
+  // 2) 远端：拿 / 建一段活跃会话
+  //    新后端 /session/start 直接返回 history 数组，省一次 /session/turns 往返
+  //    字段映射： resumed = !is_new
   try {
     const started = await apiPost('/api/session/start', { mentor_id: philKey });
     currentSessionId = started.session_id;
-    if (started.resumed && started.turn_count > 0) {
-      const { turns } = await apiGet(`/api/session/turns?session_id=${currentSessionId}`);
-      convHistory = (turns || []).map(t => ({
+    const resumed = !started.is_new;
+
+    if (resumed && Array.isArray(started.history) && started.history.length > 0) {
+      // 用后端历史覆盖本地缓存
+      convHistory = started.history.map(t => ({
         role:    roleFromServer(t.role),
-        content: t.content
+        content: t.content,
       }));
-      saveHistory(philKey, convHistory);  // 同步回本地缓存，保持一致
-    } else if (!started.resumed) {
-      // 新会话：清掉旧的本地缓存，避免上次未关闭的对话上下文混进来
+      saveHistory(philKey, convHistory);
+    } else if (!resumed) {
+      // 新会话：清掉旧的本地缓存
       convHistory = [];
       saveHistory(philKey, convHistory);
+      // 如果有上次 closed session 的标题，控制台提示（导师会在第一轮自然提起）
+      if (started.last_closed_summary_title) {
+        console.log('[session/start] 上次主题：「' + started.last_closed_summary_title + '」');
+      }
     }
   } catch (err) {
     console.warn('[session/start] 远端失败，回退到本地 localStorage', err);
