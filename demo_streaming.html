@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>15 Signals · Streaming Demo</title>
+<style>
+  :root {
+    --bg: #F6F3EC;
+    --ink: #1B1B18;
+    --muted: #6c655a;
+    --line: rgba(27, 27, 24, 0.12);
+    --accent: #8b5a3c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'EB Garamond', 'Source Han Serif', 'Noto Serif CJK SC', Georgia, serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .container {
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 0 32px 80px;
+  }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 900;
+    font-size: 36px;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .setup {
+    border: 1px solid var(--line);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    background: rgba(255,255,255,0.4);
+  }
+  .setup label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  .setup input, .setup select {
+    width: 100%;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 15px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .setup .row { display: flex; gap: 12px; }
+  .setup .row > * { flex: 1; }
+
+  button.primary {
+    margin-top: 18px;
+    padding: 10px 24px;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #000; }
+  button.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  button.ghost:hover { background: rgba(0,0,0,0.04); }
+
+  .status {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+    font-style: italic;
+  }
+  .status.err { color: #b34a3a; font-style: normal; }
+
+  /* ── chat ── */
+  .chat { margin-top: 24px; }
+  .turn { margin-bottom: 28px; }
+  .turn .who {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .turn.user .who { color: var(--accent); }
+  .turn .body {
+    font-size: 17px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .turn.mentor .body {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-style: normal;
+  }
+  .turn.user .body { font-style: italic; }
+
+  .thinking {
+    color: var(--muted);
+    font-size: 14px;
+    font-style: italic;
+    margin: 12px 0;
+  }
+  .thinking::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+  .input-row textarea {
+    flex: 1;
+    min-height: 56px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid var(--line);
+    resize: vertical;
+  }
+  .input-row textarea:focus { outline: 1px solid var(--accent); }
+  .input-row button {
+    align-self: flex-end;
+    padding: 10px 20px;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── side panel ── */
+  details.panel {
+    margin-top: 12px;
+    border: 1px dashed var(--line);
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.3);
+    font-size: 13px;
+  }
+  details.panel > summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .panel ul { margin: 8px 0; padding-left: 16px; }
+  .panel li { margin: 3px 0; }
+  .panel .mem-q { color: var(--accent); font-style: italic; }
+
+  .footer-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ── close / summary ── */
+  .ritual {
+    text-align: center;
+    padding: 60px 0;
+    font-style: italic;
+    color: var(--muted);
+  }
+  .summary {
+    border: 1px solid var(--line);
+    padding: 32px;
+    margin-top: 24px;
+    background: rgba(255,255,255,0.5);
+  }
+  .summary h2 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    margin: 0 0 12px;
+  }
+  .summary .sig {
+    display: inline-block;
+    margin-right: 10px;
+    padding: 2px 10px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+  .summary .moment {
+    margin: 18px 0;
+    padding-left: 16px;
+    border-left: 2px solid var(--line);
+  }
+  .summary .moment .quote {
+    font-style: italic;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>15 Signals · Streaming Demo</h1>
+  <div class="sub">P1 + P2 + P3 / Backend Showcase</div>
+
+  <!-- ────────────────────────────────────────── 配置 ─────────── -->
+  <div class="setup" id="setupPanel">
+    <label>BACKEND URL</label>
+    <input type="text" id="backendUrl" value="http://127.0.0.1:3459">
+
+    <div class="row">
+      <div>
+        <label>USER EMAIL</label>
+        <input type="text" id="userEmail" value="kexuejia@gmail.com">
+      </div>
+      <div>
+        <label>MENTOR</label>
+        <select id="mentorId">
+          <option value="freud">Freud · 弗洛伊德</option>
+          <option value="weber">Weber · 韦伯</option>
+          <option value="marx">Marx · 马克思</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="primary" id="startBtn">开启对话</button>
+    <div class="status" id="setupStatus"></div>
+  </div>
+
+  <!-- ────────────────────────────────────────── 对话 ─────────── -->
+  <div id="chatArea" style="display:none">
+    <div class="status" id="sessionInfo"></div>
+    <div class="chat" id="chat"></div>
+
+    <div class="input-row">
+      <textarea id="userInput" placeholder="说点什么..." rows="2"></textarea>
+      <button id="sendBtn">发送</button>
+    </div>
+
+    <details class="panel" id="debugPanel" open>
+      <summary>对话调试（每轮的 RAG + 召回 + 主题）</summary>
+      <div id="debugContent" style="color:var(--muted)">（等待第一轮...）</div>
+    </details>
+
+    <div class="footer-actions">
+      <button class="ghost" id="endBtn">今日已尽（生成复盘）</button>
+      <button class="ghost" id="restartBtn">换一位导师 / 换用户</button>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────── 复盘 ─────────── -->
+  <div id="summaryArea" style="display:none">
+    <div class="ritual" id="ritualText">今天的对话留在这里。</div>
+    <div class="summary" id="summaryBox"></div>
+    <div class="footer-actions">
+      <button class="ghost" id="restartBtn2">再开一段</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════
+   状态
+══════════════════════════════════════════════════ */
+const state = {
+  backend: 'http://127.0.0.1:3459',
+  email: '',
+  mentor: 'freud',
+  sessionId: null,
+  history: [],  // [{role, content}]
+};
+
+const MENTOR_LABELS = {
+  freud: 'Freud',
+  weber: 'Weber',
+  marx: 'Marx',
+};
+
+/* ════════════════════════════════════════════════
+   DOM helpers
+══════════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (typeof c === 'string') e.appendChild(document.createTextNode(c));
+    else if (c) e.appendChild(c);
+  }
+  return e;
+}
+
+function setStatus(id, msg, isError = false) {
+  const s = $(id);
+  s.textContent = msg;
+  s.className = 'status' + (isError ? ' err' : '');
+}
+
+function renderTurn(role, content) {
+  const div = el('div', { class: `turn ${role}` },
+    el('div', { class: 'who' }, role === 'user' ? '你' : MENTOR_LABELS[state.mentor]),
+    el('div', { class: 'body' }, content)
+  );
+  $('chat').appendChild(div);
+  return div.querySelector('.body');  // 返回 body 元素供 streaming 续写
+}
+
+function renderThinking() {
+  const div = el('div', { class: 'turn mentor' },
+    el('div', { class: 'who' }, MENTOR_LABELS[state.mentor]),
+    el('div', { class: 'thinking' }, '正在思考')
+  );
+  $('chat').appendChild(div);
+  return div.querySelector('.thinking');
+}
+
+function renderDebug(meta, doneInfo) {
+  const lines = [];
+  if (meta) {
+    if (meta.retrieval?.concepts?.length) {
+      lines.push('<b>KB 概念：</b> ' + meta.retrieval.concepts.join('、'));
+    }
+    if (meta.retrieval?.voice_examples?.length) {
+      lines.push('<b>语言范本：</b> ' + meta.retrieval.voice_examples.join('、'));
+    }
+    if (meta.memories_recalled?.length) {
+      const items = meta.memories_recalled.map(m => {
+        const q = m.source_quote ? `「${m.source_quote}」` : '<i>(pattern 记忆)</i>';
+        return `<li>sal=${m.salience.toFixed(2)} sim=${m.similarity.toFixed(2)} ${m.days_ago.toFixed(1)}天前 · <span class="mem-q">${q}</span></li>`;
+      }).join('');
+      lines.push('<b>召回的记忆：</b><ul>' + items + '</ul>');
+    } else {
+      lines.push('<b>召回的记忆：</b> 无（min_similarity 0.35 阈值过滤）');
+    }
+  }
+  if (doneInfo) {
+    lines.push(`<b>已持久化：</b> mentor_turn_id=${doneInfo.mentor_turn_id}, turn_count=${doneInfo.turn_count_after}`);
+  }
+  $('debugContent').innerHTML = lines.join('<br>');
+}
+
+/* ════════════════════════════════════════════════
+   API
+══════════════════════════════════════════════════ */
+async function backendCall(path, payload, options = {}) {
+  const res = await fetch(state.backend + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    ...options,
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`${path} ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  return res;
+}
+
+async function startSession() {
+  const r = await backendCall('/session/start', {
+    user_email: state.email,
+    mentor_id: state.mentor,
+  });
+  return await r.json();
+}
+
+async function sendTurnStreaming(userInput, onMeta, onDelta, onDone, onError) {
+  const res = await fetch(state.backend + '/session/turn/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: state.sessionId,
+      user_input: userInput,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`stream ${res.status}: ${txt}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buf = '';
+  let event = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    // 解析 SSE：以双换行分割完整事件
+    let nl;
+    while ((nl = buf.indexOf('\n\n')) !== -1) {
+      const raw = buf.slice(0, nl);
+      buf = buf.slice(nl + 2);
+      // raw 形如:  event: delta\ndata: {"text":"..."}
+      let evt = '', data = '';
+      for (const line of raw.split('\n')) {
+        if (line.startsWith('event:')) evt = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (!evt) continue;
+      let parsed = null;
+      try { parsed = JSON.parse(data); } catch {}
+      if (evt === 'meta') onMeta && onMeta(parsed);
+      else if (evt === 'delta') onDelta && onDelta(parsed?.text || '');
+      else if (evt === 'done') { onDone && onDone(parsed); return; }
+      else if (evt === 'error') { onError && onError(parsed?.detail || 'unknown error'); return; }
+    }
+  }
+}
+
+async function closeSession() {
+  // 拿当前对话历史
+  const messages = state.history.map(t => ({
+    role: t.role === 'mentor' ? 'assistant' : t.role,
+    content: t.content,
+  }));
+  const r = await backendCall('/session/close', {
+    mentor_id: state.mentor,
+    messages,
+    user_id: state.userId,
+    session_id: state.sessionId,
+  });
+  return await r.json();
+}
+
+/* ════════════════════════════════════════════════
+   Flow
+══════════════════════════════════════════════════ */
+
+$('startBtn').addEventListener('click', async () => {
+  state.backend = $('backendUrl').value.trim().replace(/\/$/, '');
+  state.email = $('userEmail').value.trim();
+  state.mentor = $('mentorId').value;
+  if (!state.email) { setStatus('setupStatus', '请填用户 email', true); return; }
+  setStatus('setupStatus', '连接 backend...');
+  try {
+    const data = await startSession();
+    state.sessionId = data.session_id;
+    state.userId = data.user_id;
+    state.history = data.history || [];
+
+    $('setupPanel').style.display = 'none';
+    $('chatArea').style.display = 'block';
+
+    const info = data.is_new
+      ? `新建 session #${data.session_id}`
+      : `续接 session #${data.session_id}（${data.turn_count} 轮历史）`;
+    const last = data.last_closed_summary_title
+      ? `   ·   上次主题：「${data.last_closed_summary_title}」`
+      : '';
+    setStatus('sessionInfo', info + last);
+
+    // 渲染历史
+    data.history.forEach(t => renderTurn(t.role, t.content));
+    if (data.history.length > 0) {
+      $('chat').scrollTo({ top: $('chat').scrollHeight, behavior: 'smooth' });
+    }
+  } catch (e) {
+    setStatus('setupStatus', '失败：' + e.message, true);
+  }
+});
+
+$('sendBtn').addEventListener('click', sendMessage);
+$('userInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendMessage();
+});
+
+async function sendMessage() {
+  const ta = $('userInput');
+  const text = ta.value.trim();
+  if (!text) return;
+  ta.value = '';
+
+  renderTurn('user', text);
+  state.history.push({ role: 'user', content: text });
+
+  const thinkingEl = renderThinking();
+  let mentorBody = null;
+  let acc = '';
+
+  try {
+    await sendTurnStreaming(text,
+      (meta) => {
+        // 第一个事件——把"正在思考"换成真正的 mentor turn 容器
+        if (thinkingEl.parentNode) {
+          thinkingEl.parentNode.removeChild(thinkingEl);
+        }
+        const div = el('div', { class: 'turn mentor' },
+          el('div', { class: 'who' }, MENTOR_LABELS[state.mentor]),
+          el('div', { class: 'body' }, '')
+        );
+        $('chat').appendChild(div);
+        mentorBody = div.querySelector('.body');
+        renderDebug(meta, null);
+      },
+      (delta) => {
+        acc += delta;
+        if (mentorBody) mentorBody.textContent = acc;
+        window.scrollTo(0, document.body.scrollHeight);
+      },
+      (done) => {
+        state.history.push({ role: 'mentor', content: acc });
+        renderDebug(null, done);
+      },
+      (err) => {
+        if (mentorBody) mentorBody.textContent = '[流式失败] ' + err;
+      }
+    );
+  } catch (e) {
+    if (thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+    renderTurn('mentor', '[错误] ' + e.message);
+  }
+}
+
+$('endBtn').addEventListener('click', async () => {
+  if (!state.history.length) return;
+  if (!confirm('结束本次对话并生成复盘？')) return;
+
+  // 仪式：fade chat → 显示 ritual 文字
+  $('chatArea').style.opacity = '0';
+  $('chatArea').style.transition = 'opacity 0.8s ease';
+  setTimeout(async () => {
+    $('chatArea').style.display = 'none';
+    $('summaryArea').style.display = 'block';
+    $('summaryArea').style.opacity = '0';
+    $('summaryArea').style.transition = 'opacity 1s ease';
+    requestAnimationFrame(() => {
+      $('summaryArea').style.opacity = '1';
+    });
+
+    try {
+      const data = await closeSession();
+      $('ritualText').textContent = '笔记已留下。';
+
+      const box = $('summaryBox');
+      box.innerHTML = '';
+      box.appendChild(el('h2', {}, data.title || '（无标题）'));
+
+      const sigs = (data.top_signals || []).map(s =>
+        el('span', { class: 'sig' }, `${s.display_name_zh}  ${s.intensity.toFixed(2)}`)
+      );
+      const sigRow = el('div', {}, ...sigs);
+      box.appendChild(sigRow);
+
+      box.appendChild(el('p', { style: 'margin-top:18px; white-space:pre-wrap' }, data.emotional_summary || ''));
+
+      (data.moments || []).forEach(m => {
+        const mDiv = el('div', { class: 'moment' });
+        mDiv.appendChild(el('div', { style: 'font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)' },
+          m.display_name_zh || m.signal_name));
+        (m.quotes || []).forEach(q => {
+          mDiv.appendChild(el('div', { class: 'quote' }, `「${q.text}」`));
+        });
+        if (m.echo) mDiv.appendChild(el('div', { style: 'margin-top:6px' }, m.echo));
+        box.appendChild(mDiv);
+      });
+
+      box.appendChild(el('div', { style: 'margin-top:24px;font-size:12px;color:var(--muted)' },
+        `整体强度 ${data.overall_intensity || 0}　·　${data.persistence_note || '（未持久化）'}`));
+    } catch (e) {
+      $('summaryBox').innerHTML = '<p style="color:#b34a3a">生成复盘失败：' + e.message + '</p>';
+    }
+  }, 800);
+});
+
+function restart() { location.reload(); }
+$('restartBtn').addEventListener('click', restart);
+$('restartBtn2').addEventListener('click', restart);
+</script>
+</body>
+</html>

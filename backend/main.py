@@ -35,9 +35,12 @@ from .db import (
     get_or_create_active_session,
     get_session_meta,
     get_session_turns,
+    get_session_with_turns,
     get_user_id_by_email,
     get_user_semantic_profile,
+    import_user_sessions,
     insert_turn,
+    list_user_sessions,
     mark_session_closed,
     persist_summary,
 )
@@ -787,3 +790,131 @@ async def session_mark_closed(req: SessionMarkClosedRequest) -> dict:
         raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
     await anyio.to_thread.run_sync(mark_session_closed, req.session_id, "closed_by_user")
     return {"ok": True, "session_id": req.session_id}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 前端兼容：列表 / 历史 turns / 导入
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# 这三个端点是为了让主前端 (15signals_web.html) 现有的代码能直接对接，
+# 不需要改它的 URL。
+#
+# 认证：用户由 user_email 直接传入。生产环境应在 Vercel 边层做 JWT 校验后转发。
+
+
+async def _resolve_user_id(user_email: str | None) -> int:
+    """解析 user_email → user_id。缺失/找不到时返回 4xx。"""
+    if not user_email:
+        raise HTTPException(status_code=400, detail="user_email required")
+    uid = await anyio.to_thread.run_sync(get_user_id_by_email, user_email)
+    if uid is None:
+        raise HTTPException(status_code=404, detail=f"user not found: {user_email}")
+    return uid
+
+
+@app.get("/session/list")
+async def session_list(
+    user_email: str,
+    limit: int = 500,
+) -> dict:
+    """列出该用户所有 session。
+
+    Returns: {sessions: [{id, mentor_id, started_at, last_active_at, status,
+                          turn_count, has_summary, summary_pretty}, ...]}
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+    uid = await _resolve_user_id(user_email)
+    sessions = await anyio.to_thread.run_sync(list_user_sessions, uid, limit)
+    return {"sessions": sessions}
+
+
+@app.get("/session/turns")
+async def session_turns(
+    session_id: int,
+    user_email: str | None = None,
+) -> dict:
+    """读 session 元数据 + 所有 turns。
+
+    user_email 可选——若提供则校验所有权（防越权）。
+
+    Returns: {session: {...meta}, turns: [...]}
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+
+    user_id: int | None = None
+    if user_email:
+        user_id = await anyio.to_thread.run_sync(get_user_id_by_email, user_email)
+
+    result = await anyio.to_thread.run_sync(get_session_with_turns, session_id, user_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"session {session_id} not found")
+    return result
+
+
+class SessionImportRequest(BaseModel):
+    user_email: str
+    sessions: list[dict]
+
+
+@app.post("/session/import")
+async def session_import(req: SessionImportRequest) -> dict:
+    """批量导入历史 session（前端 localStorage 同步到云端）。
+
+    幂等：同 (user, mentor, started_at) 的 session 跳过。
+
+    Returns: {imported, skipped, errors, session_ids}
+    """
+    if not db_enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+    uid = await _resolve_user_id(req.user_email)
+    return await anyio.to_thread.run_sync(import_user_sessions, uid, req.sessions)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# /api/* 别名 · 前端调 /api/session/* 同源路径时使用
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# 让 frontend 的 `apiPost('/api/session/start')` 不用改路径就能命中本服务。
+# （生产环境通常由 Vercel rewrite 把 /api/session/* 代理到本服务，无需此别名；
+#  但本机直接开 file:// 前端 + 本机 backend 时，CORS 允许直连，此别名让 URL 整洁）
+
+@app.post("/api/session/start", response_model=SessionStartResponse)
+async def api_session_start(req: SessionStartRequest):
+    return await session_start(req)
+
+
+@app.post("/api/session/turn", response_model=SessionTurnResponse)
+async def api_session_turn(req: SessionTurnRequest, background: BackgroundTasks):
+    return await session_turn(req, background)
+
+
+@app.post("/api/session/turn/stream")
+async def api_session_turn_stream(req: SessionTurnRequest):
+    return await session_turn_stream(req)
+
+
+@app.post("/api/session/close", response_model=SessionCloseResponse)
+async def api_session_close(req: SessionCloseRequest):
+    return await session_close(req)
+
+
+@app.get("/api/session/list")
+async def api_session_list(user_email: str, limit: int = 500):
+    return await session_list(user_email, limit)
+
+
+@app.get("/api/session/turns")
+async def api_session_turns(session_id: int, user_email: str | None = None):
+    return await session_turns(session_id, user_email)
+
+
+@app.post("/api/session/import")
+async def api_session_import(req: SessionImportRequest):
+    return await session_import(req)
+
+
+@app.post("/api/session/mark_closed")
+async def api_session_mark_closed(req: SessionMarkClosedRequest):
+    return await session_mark_closed(req)
