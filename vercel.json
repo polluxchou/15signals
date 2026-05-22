@@ -1,7 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/", "destination": "/15signals_web.html" }
+    { "source": "/", "destination": "/15signals_web.html" },
+    {
+      "source": "/api/session/:path*",
+      "destination": "https://signals-backend.fly.dev/api/session/:path*"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "https://signals-backend.fly.dev/api/admin/:path*"
+    }
   ],
   "headers": [
     {

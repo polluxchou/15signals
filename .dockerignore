@@ -1,0 +1,36 @@
+# 镜像里只装后端 + 依赖，其他都不要进去
+
+.git/
+.gitignore
+.env
+.env.*
+.venv/
+.vercel/
+.superpowers/
+.verify-venv/
+
+# 前端 / 静态资源（部署到 Vercel，不进 backend 镜像）
+*.html
+assets/
+api/
+
+# 开发工具 / 笔记 / 测试
+scripts/
+tests/
+mentor_kb/
+docs/
+migrations/
+proxy.py
+*.md
+package.json
+package-lock.json
+vercel.json
+.vercelignore
+
+# Python 中间产物
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/*.egg-info/
