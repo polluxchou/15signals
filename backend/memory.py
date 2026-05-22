@@ -177,14 +177,21 @@ def retrieve_user_memories(
     user_id: int,
     query_embedding: list[float],
     mentor_id: str | None = None,
-    top_k: int = 5,
+    top_k: int = 3,
     min_salience: float = 0.1,
+    min_similarity: float = 0.35,
 ) -> list[dict]:
     """
     召回该用户的 episodic_memories，按综合得分排序。
 
-    排序：current_salience × cosine_similarity
-    （用户的"深刻原话"会比"普通段落"更容易被召回，即使语义相似度只是中等）
+    排序：sqrt(current_salience) × similarity
+    （salience 用平方根，减弱"高显著度压倒一切"的效应——
+     避免一条强化过头的记忆与任何输入都能"勾上"）
+
+    阈值：
+      - min_salience：低于此值的记忆已退出主检索池
+      - min_similarity：与本轮输入相似度过低的记忆直接过滤
+                        （0.35 是经验值——再低就是"硬塞"了）
 
     Args:
         mentor_id: 若提供，限定只看那位导师生成的记忆；None 则全部
@@ -192,18 +199,18 @@ def retrieve_user_memories(
 
     Returns: [
       {memory_id, content, source_quote, memory_type, related_signals,
-       current_salience, similarity, days_ago, origin_session_id}
+       current_salience, similarity, days_ago, origin_session_id, rank_score}
     ]
     """
     with _conn() as conn:
         with conn.cursor() as cur:
-            # SQL：先按向量距离取候选 (top_k*3)，再按 salience*similarity 取 top_k
+            # SQL：先按向量距离取候选 (top_k*4)，再按 salience*similarity 取 top_k
             params: list = [query_embedding, user_id, min_salience]
             mentor_clause = ""
             if mentor_id:
                 mentor_clause = "AND mentor_id = %s"
                 params.append(mentor_id)
-            params.extend([query_embedding, top_k * 3])
+            params.extend([query_embedding, top_k * 4])
 
             cur.execute(
                 f"""
@@ -227,12 +234,13 @@ def retrieve_user_memories(
                     origin_session_id,
                     emotional_intensity,
                     extract(epoch from (now() - last_reinforced_at)) / 86400.0 AS days_ago,
-                    current_salience * similarity AS rank_score
+                    sqrt(current_salience) * similarity AS rank_score
                 FROM candidates
+                WHERE similarity >= %s
                 ORDER BY rank_score DESC
                 LIMIT %s
                 """,
-                params + [top_k],
+                params + [min_similarity, top_k],
             )
 
             rows = cur.fetchall()

@@ -301,6 +301,15 @@
     }
     textarea::placeholder { color: var(--ink-faint); font-style: italic; }
     textarea:disabled { opacity: 1; }
+    /* 写作场景的输入线延迟出现——让用户先认真看完上文
+       默认透明；进入场景 2.5s 后，由 JS 加 .line-shown 让它淡入 */
+    #userInput {
+      border-bottom-color: transparent;
+      transition: border-bottom-color 1.2s ease;
+    }
+    #userInput.line-shown {
+      border-bottom-color: var(--border);
+    }
     .write-footer {
       margin-top: 16px;
       display: flex;
@@ -1479,7 +1488,7 @@
     <div class="daily-date" id="dailyDate"></div>
     <div class="daily-image" id="dailyImage"></div>
     <p class="daily-prompt">今天，这让你想起了什么？</p>
-    <textarea id="dailyInput" placeholder="任何浮现的——一个画面、一句话、一种感觉……" rows="1"></textarea>
+    <textarea id="dailyInput" placeholder="" rows="1"></textarea>
     <div class="write-footer">
       <span class="write-hint">回车发送</span>
       <button class="submit-btn" id="dailySubmitBtn" aria-label="发送">↓</button>
@@ -2211,7 +2220,12 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   css(document.getElementById('startBtn'), { transition: 'opacity 0.3s', opacity: '0' });
   setupWriting();
   await go('sceneWriting', 540);
-  document.getElementById('userInput').focus();
+  // 让用户先认真看完上文（哲学家刚说的话），2.5s 后输入线浮现 + 光标落进来
+  setTimeout(() => {
+    const u = document.getElementById('userInput');
+    u.classList.add('line-shown');
+    u.focus();
+  }, 2500);
 });
 
 // 从哲学家最后一段话里提取收尾疑问句，作为输入框提示
@@ -2258,6 +2272,8 @@ function setupWriting() {
   }
   // placeholder 永远是中性短提示，绝不回收哲学家的原话
   document.getElementById('userInput').placeholder = '回应……';
+  // 每次进场都从"无线"状态开始——线由 startBtn/replyBtn 在 2.5s 后加回
+  document.getElementById('userInput').classList.remove('line-shown');
 
   // 写字屏的"结束对话"入口：聊过至少 1 轮后才露出，避免首轮就给退出按钮
   const endBtnW = document.getElementById('endBtnWriting');
@@ -2422,12 +2438,20 @@ replyBtn.addEventListener('click', async () => {
   css(replyBtn, { transition: 'opacity 0.25s ease', opacity: '0' });
   setupWriting();
   await go('sceneWriting', 560);
-  input.focus();
+  // 让用户先认真看完上文（哲学家刚说的话），2.5s 后输入线浮现 + 光标落进来
+  setTimeout(() => {
+    input.classList.add('line-shown');
+    input.focus();
+  }, 2500);
 });
 
 /* ── 发送绑定（可复用工厂）────────────────────────────────
    交互契约（已回归朴素）：
    1. 输入框默认空，永不预填——起点的纯净。
+      ⚠ 这条最容易被违反：placeholder 也算预填。
+        无论"对方的问句""产品的诗意邀请"还是任何完整句子，
+        都不可以出现在输入框里。占位 = 替用户开口。
+        最多用极短的中性提示（"……"或干脆 ""），不可用整句。
    2. 发送 = 点击 ↓ 按钮，或按 Enter。
    3. Enter 不换行——每条消息是一个完整的念头，不分段。
    4. 例外：IME 拼音选词 / 听写期间 Enter 仍交还给系统（必需）。

@@ -379,7 +379,7 @@ class SessionTurnRequest(BaseModel):
     user_input: str = Field(..., min_length=1)
     top_k_concepts: int = 5
     top_k_voice: int = 3
-    temperature: float = 0.7
+    temperature: float = 0.5
     debug: bool = False
 
 
@@ -450,8 +450,9 @@ async def session_turn(req: SessionTurnRequest, background: BackgroundTasks) -> 
     )
 
     # 2b. 召回该用户的 episodic_memories（不限 mentor，记忆是"用户的"）
+    #     top_k=3, min_similarity=0.35（避免高 salience 的记忆与任何输入都勾上）
     user_memories = await anyio.to_thread.run_sync(
-        retrieve_user_memories, user_id, q_emb, None, 5, 0.1,
+        retrieve_user_memories, user_id, q_emb, None, 3, 0.1, 0.35,
     )
     # 强化被召回的记忆：salience += 0.05, reinforcement_count += 1, last_reinforced_at = now()
     if user_memories:
