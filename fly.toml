@@ -1,0 +1,36 @@
+# Fly.io 配置 · 15 Signals Backend
+# 部署后访问地址：https://<APP_NAME>.fly.dev
+# 默认 APP_NAME 是文件里的 app = "..."；可以改成你喜欢的名字（必须全局唯一）
+
+app = "signals-backend"
+primary_region = "sjc"   # San Jose；改成离你/用户最近的：iad=美东、nrt=东京、hkg=香港、sin=新加坡
+
+[build]
+  # 用项目根的 Dockerfile
+
+[env]
+  # 这里的环境变量是"明文"的；密钥要用 `fly secrets set` 而非这里
+  PYTHONUNBUFFERED = "1"
+  LOG_LEVEL = "INFO"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # 闲置时自动停机，省机器小时；有请求时秒级启动
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+# 单实例资源配置（免费档够用）
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"     # 256mb 太紧，给 SSE 流多点余量
+  cpus = 1
