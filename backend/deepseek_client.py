@@ -66,7 +66,7 @@ def call_mentor_response(
             messages=full_messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            stream=False,  # P1 先不上 streaming，后续改 stream=True
+            stream=False,
         )
         text = (resp.choices[0].message.content or "").strip()
         if not text:
@@ -76,6 +76,44 @@ def call_mentor_response(
         if isinstance(e, DeepSeekError):
             raise
         raise DeepSeekError(f"call_mentor_response failed: {type(e).__name__}: {e}") from e
+
+
+def stream_mentor_response(
+    system_prompt: str,
+    messages: list[dict],
+    temperature: float = 0.5,
+    max_tokens: int = 600,
+):
+    """流式生成。yield 每个文本增量（delta）。
+
+    用法：
+        full = []
+        for delta in stream_mentor_response(sys, msgs):
+            print(delta, end="", flush=True)
+            full.append(delta)
+        final_text = "".join(full)
+    """
+    client = get_client()
+    model = get_model_mentor()
+    full_messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    full_messages.extend(messages)
+
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=full_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+        )
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                yield delta
+    except Exception as e:
+        if isinstance(e, DeepSeekError):
+            raise
+        raise DeepSeekError(f"stream_mentor_response failed: {type(e).__name__}: {e}") from e
 
 
 def call_summary(system_prompt: str, user_message: str, max_retries: int = 2) -> dict[str, Any]:

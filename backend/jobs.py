@@ -365,9 +365,21 @@ def find_consolidation_candidates() -> dict[int, list[dict]]:
             return groups
 
 
-def _build_consolidation_prompt(memories: list[dict]) -> tuple[str, str]:
-    """构建给 LLM 的提示：从一组反复出现的记忆里，提炼稳定的"关于该用户的事实"。"""
-    sys = """你是一位长期观察这位用户的导师。下面是这位用户在多次对话中**反复出现**的话和模式。
+def _build_consolidation_prompt(
+    memories: list[dict],
+    existing_profile: dict | None = None,
+) -> tuple[str, str]:
+    """构建给 LLM 的提示：把新记忆**合并**进既有 profile，不是替换。
+
+    当 existing_profile 存在时，prompt 强调"保留 + 增补"而不是重写。
+    """
+    has_existing = existing_profile is not None and any(
+        existing_profile.get(k) for k in ("core_themes", "relational_map", "self_narratives", "recurring_concerns")
+    )
+
+    if not has_existing:
+        # 首次巩固：从零生成
+        sys = """你是一位长期观察这位用户的导师。下面是这位用户在多次对话中**反复出现**的话和模式。
 
 请把它们提炼成几条**稳定的、关于这位用户的事实**——不是症状清单，而是导师对一个人的认知。
 
@@ -383,33 +395,90 @@ def _build_consolidation_prompt(memories: list[dict]) -> tuple[str, str]:
 - 只用对话语言，不用医学/心理术语
 - 不要扩张未给出的信息，宁可少一项也别编
 - 输出纯 JSON，第一个字符 `{`，最后一个字符 `}`"""
+    else:
+        # 增量巩固：合并模式
+        sys = """你是一位长期观察这位用户的导师。你已经积累了对这位用户的一份**理解**，
+现在又有一批**新强化的记忆**进入。你的任务不是**重写**这份理解——而是**让它继续生长**。
 
-    user_lines = ["以下是这位用户的反复出现的话/模式：\n"]
+输出一份**合并后的** profile JSON，结构同已有 profile：
+{
+  "core_themes": [...],          // 主题数组，3-6 条
+  "self_narratives": [...],      // 1-4 条
+  "relational_map": {...},       // 人物 → 关系描述
+  "recurring_concerns": [...]    // 1-4 条
+}
+
+**合并规则（极其重要）**：
+
+1. **保留**：已有 profile 中的每一项，**默认都保留**。
+   - 即使新记忆没有提到"母亲"，"母亲"主题如果之前在，仍然在。
+   - 用户的某些主题是**稳定的**——童年、家人、工作核心矛盾——即使几周没谈也是这个人的一部分。
+
+2. **精化**：如果新记忆**深化或修正**了已有主题 → 改写那一条让它更准。
+   - 比如已有"睡眠问题"，新记忆是"凌晨 4 点醒"——可以精化为"凌晨四点早醒"。
+
+3. **新增**：新记忆带来**已有 profile 完全没覆盖到**的方向 → 加入新条目。
+
+4. **绝不**：因为新记忆没提到，就删掉已有的条目。
+
+5. 数组保持精简：每个数组**最多 6 条**——如果合并后超出，淘汰**最不被反复强化**的那条。
+
+6. relational_map 用合并而非替换：已有的人继续在；新出现的人加入。
+
+输出纯 JSON，第一个字符 `{`，最后一个字符 `}`。"""
+
+    user_parts = []
+
+    if has_existing:
+        user_parts.append("【你已有的 profile（绝对要保留主体结构）】\n")
+        user_parts.append(json.dumps(existing_profile, ensure_ascii=False, indent=2))
+        user_parts.append("\n\n【这批新强化的记忆】\n")
+    else:
+        user_parts.append("以下是这位用户的反复出现的话/模式：\n")
+
     for i, m in enumerate(memories, 1):
-        kind = m["memory_type"]
         sal = m["salience"]
         reinf = m["reinforcement_count"]
         sigs = ",".join(m.get("related_signals") or [])
         if m.get("source_quote"):
-            user_lines.append(f"{i}. [原话, 显著度={sal:.2f}, 强化={reinf}次, 信号={sigs}]")
-            user_lines.append(f"   「{m['source_quote']}」")
+            user_parts.append(f"{i}. [原话, 显著度={sal:.2f}, 强化={reinf}次, 信号={sigs}]")
+            user_parts.append(f"   「{m['source_quote']}」")
         else:
-            user_lines.append(f"{i}. [模式总结, 显著度={sal:.2f}, 强化={reinf}次]")
-            user_lines.append(f"   {m['content'][:200]}")
-    return sys, "\n".join(user_lines)
+            user_parts.append(f"{i}. [模式总结, 显著度={sal:.2f}, 强化={reinf}次]")
+            user_parts.append(f"   {m['content'][:200]}")
+
+    if has_existing:
+        user_parts.append("\n\n请按 system 中的合并规则，输出更新后的 profile（合并已有 + 新增）。")
+    else:
+        user_parts.append("\n请按 system 中规定的结构输出 profile。")
+
+    return sys, "\n".join(user_parts)
 
 
 def consolidate_user(user_id: int, memories: list[dict]) -> dict:
     """
     巩固单个用户的记忆：
-      1. LLM 提炼 profile
-      2. UPSERT user_semantic_profile
-      3. mark episodic_memories.consolidated_to_semantic = true
+      1. 读取既有 user_semantic_profile（如果有）
+      2. LLM 把新记忆**合并**进既有 profile（不是替换）
+      3. UPSERT user_semantic_profile
+      4. mark episodic_memories.consolidated_to_semantic = true
     """
     if not memories:
         return {"user_id": user_id, "skipped": True, "reason": "no candidates"}
 
-    sys, usr = _build_consolidation_prompt(memories)
+    # 读现有 profile（用于合并模式）
+    existing_profile: dict | None = None
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT profile FROM user_semantic_profile WHERE user_id = %s",
+                (user_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                existing_profile = row[0]
+
+    sys, usr = _build_consolidation_prompt(memories, existing_profile=existing_profile)
 
     client = get_client()
     model = get_model_scorer()
@@ -418,7 +487,7 @@ def consolidate_user(user_id: int, memories: list[dict]) -> dict:
             model=model,
             messages=[{"role": "system", "content": sys}, {"role": "user", "content": usr}],
             temperature=0.3,
-            max_tokens=800,
+            max_tokens=1000,  # 合并模式可能更长
             response_format={"type": "json_object"},
         )
         raw = resp.choices[0].message.content or "{}"
@@ -426,6 +495,13 @@ def consolidate_user(user_id: int, memories: list[dict]) -> dict:
     except Exception as e:
         logger.warning("consolidate user=%d LLM failed: %s", user_id, e)
         return {"user_id": user_id, "ok": False, "reason": str(e)}
+
+    # 安全网：如果合并后的 profile 比既有的"缩水严重"，警告 + 保护性 merge
+    if existing_profile:
+        shrunk = _detect_shrinkage(existing_profile, profile)
+        if shrunk:
+            logger.warning("consolidate user=%d LLM 输出疑似丢失内容: %s", user_id, shrunk)
+            profile = _safe_merge(existing_profile, profile)
 
     # UPSERT user_semantic_profile，并把 episodic memories 标记 consolidated
     memory_ids = [m["memory_id"] for m in memories]
@@ -458,7 +534,70 @@ def consolidate_user(user_id: int, memories: list[dict]) -> dict:
         "ok": True,
         "memories_consolidated": len(memory_ids),
         "profile_keys": list(profile.keys()),
+        "merged_with_existing": existing_profile is not None,
     }
+
+
+def _detect_shrinkage(old: dict, new: dict) -> dict | None:
+    """检查合并后的 profile 是否疑似丢了内容。返回 {field: lost_items} 或 None。"""
+    lost: dict[str, list] = {}
+
+    # 数组字段：检查 old 里超过 1 个的，new 里少了几个
+    for field in ("core_themes", "self_narratives", "recurring_concerns"):
+        old_items = old.get(field) or []
+        new_items = new.get(field) or []
+        if len(old_items) > 1 and len(new_items) < max(1, len(old_items) - 1):
+            # 丢了 ≥ 2 项
+            lost[field] = old_items
+
+    # relational_map：检查 key 是否丢失
+    old_rel = old.get("relational_map") or {}
+    new_rel = new.get("relational_map") or {}
+    if isinstance(old_rel, dict) and isinstance(new_rel, dict):
+        missing_keys = [k for k in old_rel if k not in new_rel]
+        if missing_keys:
+            lost["relational_map"] = missing_keys
+
+    return lost if lost else None
+
+
+def _safe_merge(old: dict, new: dict) -> dict:
+    """保护性合并：如果 LLM 输出疑似丢了内容，把老的内容补回来。
+
+    策略：
+      - 数组字段：union 去重，新的在前（更鲜活），上限 6 条
+      - relational_map：合并，新值优先
+    """
+    merged: dict = dict(new)  # 以新为基底
+
+    for field in ("core_themes", "self_narratives", "recurring_concerns"):
+        old_items = old.get(field) or []
+        new_items = new.get(field) or []
+        if not old_items and not new_items:
+            continue
+        # 新在前 + 老在后，去重后取前 6
+        seen: set[str] = set()
+        combined: list[str] = []
+        for item in list(new_items) + list(old_items):
+            if not isinstance(item, str):
+                continue
+            key = item.strip()
+            if key and key not in seen:
+                seen.add(key)
+                combined.append(item)
+            if len(combined) >= 6:
+                break
+        merged[field] = combined
+
+    # relational_map：dict 合并，old 的 key 如果 new 没覆盖就保留
+    old_rel = old.get("relational_map") or {}
+    new_rel = new.get("relational_map") or {}
+    if isinstance(old_rel, dict) and isinstance(new_rel, dict):
+        rel = dict(old_rel)
+        rel.update(new_rel)
+        merged["relational_map"] = rel
+
+    return merged
 
 
 def run_consolidate() -> dict:
